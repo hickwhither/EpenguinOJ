@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { post_request } from '../../Request';
 import { toast } from 'react-toastify';
 
-export default function SubmitModal({ isOpen, onClose, problem_code, problemName, contestCode }) {
+export default function SubmitModal({ isOpen, onClose, problem_id, problemName, contest_code }) {
   const [language, setLanguage] = useState('cpp');
   const [source, setSource] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -14,10 +14,10 @@ export default function SubmitModal({ isOpen, onClose, problem_code, problemName
     setSubmitting(true);
     try {
       const params = new URLSearchParams();
-      if (problem_code) params.append('problem_code', problem_code);
-      if (contestCode) params.append('contest_code', contestCode);
+      if (problem_id) params.append('problem_id', problem_id);
+      if (contest_code) params.append('contest_id', contest_code);
 
-      const res = await post_request(`/submit_code?${params.toString()}`, { language, source });
+      const res = await post_request(`/submit_id?${params.toString()}`, { language, source });
       
       if (res.status === 201 || res.status === 200) {
         toast.success("Submit code success!");
@@ -38,7 +38,7 @@ export default function SubmitModal({ isOpen, onClose, problem_code, problemName
       <div className="modal-background" onClick={() => !submitting && onClose()}></div>
       <div className="modal-content">
         <div className="box">
-          <h2 className="title is-4">Nộp bài: {problemName || `Bài ${problem_code}`}</h2>
+          <h2 className="title is-4">Nộp bài: {problemName || `Bài ${problem_id}`}</h2>
           
           <form onSubmit={handleSubmit} className="is-flex is-flex-direction-column" style={{ gap: '12px' }}>
             {/* Language */}

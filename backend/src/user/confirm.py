@@ -2,16 +2,14 @@ import os
 import jwt
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel, EmailStr
-from pwdlib import PasswordHash
 from sqlmodel import select
 
 from src.database import SessionDep
-
-from src.models.user import User
+from src.models import User
 from src.dependencies.user import create_auth
 
 # CONFIGURATION
-pwd = PasswordHash.recommended()
+from src.dependencies import hash_password, verify_password
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 
@@ -84,7 +82,7 @@ def confirm_create_account(
     new_user = User(
         username=data.username,
         email=data.email,
-        password=pwd.hash(data.password),
+        password=hash_password(data.password),
         discord_id=discord_id
     )
     session.add(new_user)
@@ -105,7 +103,7 @@ def confirm_reset_password(
     if not user:
         raise HTTPException(400, "confirm.invalid_discord_id")
 
-    user.password = pwd.hash(data.password)
+    user.password = hash_password(data.password)
     session.add(user)
     session.commit()
     

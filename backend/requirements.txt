@@ -4,8 +4,9 @@ itsdangerous
 
 fastapi[standard]
 
-sqlmodel=
+sqlmodel
 pwdlib[argon2]
 fastadmin[fastapi,sqlalchemy]
+pymysql
 aiosqlite
 asyncmy

@@ -1,26 +1,18 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlmodel import select
+from sqlmodel import select, or_
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from src.database import SessionDep
-
-from src.models.contest import Contest
-from src.dependencies.contest import get_contest_or_404, ensure_contest_running, ensure_can_view_contest
-
-from src.models.user import User
+from src.models import User
+from src.models import Problem, ProblemPublic, ProblemView
+from src.models import Submission, SubmissionPublic, SubmissionView
+from src.dependencies.contest import get_contest_or_404, ensure_contest_running, ensure_can_view_problem_contest
 from src.dependencies.user import verify_auth, get_user_or_404
-
-from src.models.problem import Problem
-from src.dependencies.problem import get_problem_or_404
-
-from src.models.submission import Submission
-
-from src.public import *
 
 
 # CONFIGURATION
@@ -33,25 +25,41 @@ class SubmissionCreate(BaseModel):
     source: str
 
 
+# FUNCTIONS
+def get_problem_or_404(session: SessionDep, id: str) -> Problem:
+    problem = session.get(Problem, id)
+    if not problem:
+        raise HTTPException(404, "problem.notfound")
+    return problem
+
+
 # ROUTERS
 @router.get("/problems", response_model=Page[ProblemPublic])
-def get_list_problem(session: SessionDep):
-    return paginate(session, select(Problem).where(Problem.is_public == True))
+def get_list_problem(
+    session: SessionDep,
+    search: str | None = None
+):
+    query = select(Problem).where(Problem.is_public == True)
+    # Filter by name
+    if search:
+        search_filter = f"%{search.strip()}%"
+        query = query.where(Problem.name.ilike(search_filter))
+    query = query.order_by(Problem.id.desc())
+    return paginate(session, query)
 
 
 @router.get("/problem", response_model=ProblemView)
 def get_problem(
     session: SessionDep,
-    problem_code: str,
-    contest_code: str | None = None,
+    problem_id: str,
+    contest_id: str | None = None,
     current_user: User = Depends(verify_auth)
 ):
-    problem = get_problem_or_404(session, problem_code)
-
-    if contest_code:
-        contest = get_contest_or_404(session, contest_code)
+    problem = get_problem_or_404(session, problem_id)
+    if contest_id:
+        contest = get_contest_or_404(session, contest_id)
         ensure_contest_running(contest)
-        ensure_can_view_contest(contest, current_user, session)
+        ensure_can_view_problem_contest(contest, current_user, session)
         return problem
     
     if not problem.is_public:
@@ -63,16 +71,17 @@ def get_problem(
 def submit_code(
     session: SessionDep,
     submit_form: SubmissionCreate,
-    problem_code: str,
-    contest_code: str | None = None,
+    problem_id: str,
+    contest_id: str | None = None,
     current_user: User = Depends(verify_auth)
 ):
-    problem = get_problem_or_404(session, problem_code)
+    problem = get_problem_or_404(session, problem_id)
     contest = None
-    if contest_code:
-        contest = get_contest_or_404(session, contest_code)
+    
+    if contest_id:
+        contest = get_contest_or_404(session, contest_id)
         ensure_contest_running(contest)
-        ensure_can_view_contest(contest, current_user, session)
+        ensure_can_view_problem_contest(contest, current_user, session)
     else:
         if not problem.is_public:
             raise HTTPException(status_code=403, detail="problem.forbidden")
@@ -98,17 +107,17 @@ def submit_code(
 def get_list_submission(
     session: SessionDep,
     is_best: bool = False,
-    contest_code: str | None = None,
-    problem_code: str | None = None,
+    contest_id: str | None = None,
+    problem_id: str | None = None,
     username: str | None = None,
 ):
     query = select(Submission)
 
-    if contest_code:
-        contest = get_contest_or_404(session, contest_code)
+    if contest_id:
+        contest = get_contest_or_404(session, contest_id)
         query = query.where(Submission.contest_id == contest.id)
-    if problem_code:
-        problem = get_problem_or_404(session, problem_code)
+    if problem_id:
+        problem = get_problem_or_404(session, problem_id)
         query = query.where(Submission.problem_id == problem.id)
     if username:
         user = get_user_or_404(session, username)

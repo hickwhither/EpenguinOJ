@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { get_request } from '../Request';
 
 import { useAuth } from '../context/AuthContext';
@@ -16,25 +16,16 @@ import rehypeKatex from "rehype-katex";
 // IMPORTANT: Import CSS của KaTeX để công thức Toán hiển thị đúng! (AI noi vay chu tui hok biet)
 import 'katex/dist/katex.min.css';
 
-const fetchProblem = async (problem_code, contest_code) => {
-  const params = new URLSearchParams({ problem_code });
-  if (contest_code) params.contest_code = contest_code;
+const fetchProblem = async (problem_id, contest_id) => {
+  const params = new URLSearchParams({ problem_id, contest_id });
 
-  // GET /problem?problem_code=...&contest_code=...
+  // GET /problem?problem_id=...&contest_id=...
   const res = await get_request(`/problem?${params.toString()}`);
   return res.data;
 };
 
 export default function ProblemDisplay() {
-  // p/:problem_code
-  // p/:problem_code/:contest_code
-  const { problem_code, contest_code: routeContestCode } = useParams();
-  // /p/SUM?contest_code=CONTEST_01
-  const [searchParams] = useSearchParams();
-  const queryContestCode = searchParams.get('contest_code');
-
-  // Ưu tiên contest_code từ Route param, nếu không có thì lấy từ Query string
-  const contest_code = routeContestCode || queryContestCode || null;
+  const { problem_id, contest_id } = useParams();
 
   const { current_user, loginRequired } = useAuth();
   
@@ -45,10 +36,10 @@ export default function ProblemDisplay() {
   const closeSubmissionList = () => setSubmissionList(prev => ({ ...prev, isOpen: false }));
 
   const { data: p = {}, isLoading, error } = useQuery({
-    queryKey: ['problem', problem_code, contest_code],
-    queryFn: () => fetchProblem(problem_code, contest_code),
-    enabled: !!problem_code, // Chỉ chạy query khi có problem_code
-    staleTime: 1000 * 60 * 5,
+    queryKey: ['problem', problem_id, contest_id],
+    queryFn: () => fetchProblem(problem_id, contest_id),
+    enabled: !!problem_id, // Chỉ chạy query khi có problem_id
+    staleTime: 1000 * 60,
   });
 
   // Loading & Error states
@@ -66,6 +57,10 @@ export default function ProblemDisplay() {
         {error.response?.data?.detail || error.message || t("Cannot load problem")}
       </div>
     );
+  }
+
+  if(!p){
+    return <div className='box'>no problem</div>
   }
 
   return (
@@ -126,7 +121,7 @@ export default function ProblemDisplay() {
       <div className="column">
         <h1 className="title">
           {p.name || ``}{' '}
-          <span className="has-text-grey-light">({p.code || problem_code})</span>
+          <span className="has-text-grey-light">({p.id || problem_id})</span>
         </h1>
         <hr />
         
@@ -136,7 +131,7 @@ export default function ProblemDisplay() {
             remarkPlugins={[remarkGfm, remarkMath]}
             rehypePlugins={[rehypeKatex]}
           >
-            {p.statement || t('No statement')}
+            {p.statement || 'No statement'}
           </ReactMarkdown>
         </div>
       </div>
@@ -145,17 +140,17 @@ export default function ProblemDisplay() {
       <SubmitModal 
         isOpen={isSubmitModalOpen}
         onClose={() => setIsSubmitModalOpen(false)}
-        problem_code={p.code || problem_code}
-        problemName={p.name}
-        contest_code={contest_code}
+        problem_id={p.id || problem_id}
+        problem_name={p.name}
+        contest_id={contest_id}
       />
       
       <SubmissionList 
         isOpen={submissionList.isOpen}
         onClose={closeSubmissionList}
-        problem_code={p.code || problem_code}
+        problem_id={p.id || problem_id}
         problem_name={p.name}
-        contest_code={contest_code}
+        contest_id={contest_id}
         mode={submissionList.mode}
         username={current_user?.username || ""}
       />

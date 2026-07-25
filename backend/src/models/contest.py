@@ -1,6 +1,6 @@
-from typing import TYPE_CHECKING, Optional
+from typing import *
+from sqlmodel import *
 from datetime import datetime
-from sqlmodel import SQLModel, Field, Relationship, TEXT
 
 from .links import ContestTask, ContestRegistration
 
@@ -10,28 +10,25 @@ if TYPE_CHECKING:
     from .submission import Submission
 
 
-class ContestBase(SQLModel):
+class ContestPublic(SQLModel):
     id: Optional[int] = Field(primary_key=True)
-    code: str = Field(unique=True, index=True)
     name: Optional[str] = Field(index=True)
-    description: Optional[str] = Field(sa_type=TEXT)
-    
     registration_start: Optional[datetime] = Field(index=True)
     registration_end: Optional[datetime] = Field(index=True)
     start_time: datetime = Field(index=True)
     end_time: datetime = Field(index=True)
-    
+
+
+class ContestView(ContestPublic):
+    description: Optional[str] = Field(sa_type=TEXT)
+
+
+class Contest(ContestView, table=True):
     password: Optional[str] = Field()
-
-
-
-class Contest(ContestBase, table=True):
     problems: list["Problem"] = Relationship(link_model=ContestTask)
-    participants: list["User"] = Relationship(link_model=ContestRegistration)
+    registrations: list[ContestRegistration] = Relationship(back_populates="contest")
     submissions: list["Submission"] = Relationship(back_populates="contest")
 
-    def __repr__(self):
-        return f"Contest({self.code} {self.start_time} -> {self.end_time})"
+    def __str__(self): return self.name
+    def __repr__(self): return f"Contest({self.name} {self.start_time} -> {self.end_time})"
 
-    def __str__(self):
-        return self.code

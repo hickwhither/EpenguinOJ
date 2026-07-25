@@ -8,11 +8,11 @@ const getStatusTagClass = (percentage, status) => {
   return 'is-danger';
 };
 
-const fetchSubmissions = async ({ problem_code, mode, username, contest_code, page }) => {
+const fetchSubmissions = async ({ problem_id, mode, username, contest_id, page }) => {
   const params = new URLSearchParams({ page });
   
-  if (problem_code) params.append('problem_code', problem_code);
-  if (contest_code) params.append('contest_code', contest_code);
+  if (problem_id) params.append('problem_id', problem_id);
+  if (contest_id) params.append('contest_id', contest_id);
 
   if (mode === 'leaderboard') {
     params.append('is_best', 'true');
@@ -32,21 +32,21 @@ const fetchSubmissions = async ({ problem_code, mode, username, contest_code, pa
   };
 };
 
-export default function SubmissionList({ isOpen, onClose, problem_code, mode, username, contest_code }) {
+export default function SubmissionList({ isOpen, onClose, problem_id, mode, username, contest_id }) {
   const [page, setPage] = useState(1);
 
-  // Reset về trang 1 khi thay đổi mode, problem_code, contest_code hoặc khi modal mở lại
+  // Reset về trang 1 khi thay đổi mode, problem_id, contest_id hoặc khi modal mở lại
   useEffect(() => {
     if (isOpen) {
       setPage(1);
     }
-  }, [isOpen, mode, problem_code, contest_code]);
+  }, [isOpen, mode, problem_id, contest_id]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['submissions', { problem_code, mode, username, contest_code, page }],
-    queryFn: () => fetchSubmissions({ problem_code, mode, username, contest_code, page }),
+    queryKey: ['submissions', { problem_id, mode, username, contest_id, page }],
+    queryFn: () => fetchSubmissions({ problem_id, mode, username, contest_id, page }),
     staleTime: 1000 * 10,
-    enabled: isOpen && !!problem_code,
+    enabled: isOpen && !!problem_id,
     placeholderData: (prev) => prev,
   });
 

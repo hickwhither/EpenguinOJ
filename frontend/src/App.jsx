@@ -20,9 +20,9 @@ import DiscordConfirm from './pages/DiscordConfirm'
 import ProblemList from './pages/ProblemList'
 import ProblemDisplay from './pages/ProblemDisplay'
 import ContestList from './pages/ContestList'
-import ContestDisplay from './pages/ContestDisplay'
 import About from './pages/About'
 import NotFound from './pages/NotFound'
+import ContestDisplay from './pages/ContestDisplay'
 
 const queryClient = new QueryClient()
 
@@ -40,10 +40,10 @@ function App() {
           <Route path="/about" element={<About />} />
 
           <Route path="/problems" element={<RequireAuth><ProblemList /></RequireAuth>} />
-          <Route path="/p/:problem_code" element={<RequireAuth><ProblemDisplay /></RequireAuth>} />
-          <Route path="/c/:contest_code/p/:probolem_code" element={<RequireAuth><ProblemDisplay /></RequireAuth>} />
+          <Route path="/p/:problem_id" element={<RequireAuth><ProblemDisplay /></RequireAuth>} />
+          <Route path="/c/:contest_id" element={<RequireAuth><ContestDisplay /></RequireAuth>} />
+          <Route path="/c/:contest_id/:problem_id" element={<RequireAuth><ProblemDisplay /></RequireAuth>} />
           <Route path="/contests" element={<RequireAuth><ContestList /></RequireAuth>} />
-          <Route path="/c/:contest_code" element={<RequireAuth><ContestDisplay /></RequireAuth>} />
           
 
           <Route path="*" element={<NotFound />} />

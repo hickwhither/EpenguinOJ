@@ -1,11 +1,11 @@
 import os
 
-from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from .database import get_database_url
 from .models import Contest, Problem, Submission, User
+from .dependencies import hash_password, verify_password
 
 os.environ.setdefault("ADMIN_USER_MODEL", "User")
 os.environ.setdefault("ADMIN_USER_MODEL_USERNAME_FIELD", "username")
@@ -17,8 +17,6 @@ os.environ.setdefault("ADMIN_SITE_HEADER_LOGO", "/logo.png")
 os.environ.setdefault("ADMIN_SITE_FAVICON", "/logo.png")
 
 from fastadmin import SqlAlchemyModelAdmin, WidgetType, fastapi_app as admin_app, register
-
-pwd = PasswordHash.recommended()
 
 
 def get_async_database_url() -> str:
@@ -55,7 +53,7 @@ class UserAdmin(SqlAlchemyModelAdmin):
             query = select(self.model_cls).filter_by(username=username, superuser=True, active=True)
             result = await session.scalars(query)
             user = result.first()
-            if user and pwd.verify(password, user.password):
+            if user and verify_password(password, user.password):
                 return user.id
         return None
 
@@ -64,7 +62,7 @@ class UserAdmin(SqlAlchemyModelAdmin):
         async with sessionmaker() as session:
             user = await session.get(self.model_cls, id)
             if user:
-                user.password = pwd.hash(password)
+                user.password = hash_password(password)
                 await session.commit()
 
 
@@ -83,13 +81,26 @@ class ProblemAdmin(SqlAlchemyModelAdmin):
 @register(Contest, sqlalchemy_sessionmaker=admin_sessionmaker)
 class ContestAdmin(SqlAlchemyModelAdmin):
     menu_section = "Content"
-    list_display = ("id", "code", "name", "start_time", "end_time")
-    list_display_links = ("id", "code", "name")
-    search_fields = ("code", "name", "description")
+    list_display = ("id", "name", "start_time", "end_time")
+    list_display_links = ("id", "name")
+    search_fields = ("name", "description")
     formfield_overrides = {
         "description": (WidgetType.TextArea, {"rows": 4}),
         "password": (WidgetType.PasswordInput, {"required": False}),
     }
+
+    async def get_participants_list(self, obj: Contest) -> str:
+        if not obj.registrations:
+            return "Chưa có"
+        # Lấy tối đa 5 người đầu tiên để tránh bị dài giao diện
+        names = [reg.user.username for reg in obj.registrations[:5]]
+        total = len(obj.registrations)
+        res = ", ".join(names)
+        if total > 5:
+            res += f" và {total - 5} người khác..."
+        return res
+
+    get_participants_list.short_description = "Participants"
 
 
 @register(Submission, sqlalchemy_sessionmaker=admin_sessionmaker)
@@ -104,3 +115,4 @@ class SubmissionAdmin(SqlAlchemyModelAdmin):
         "source": (WidgetType.TextArea, {"rows": 12}),
         "error": (WidgetType.TextArea, {"rows": 4}),
     }
+

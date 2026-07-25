@@ -1,13 +1,34 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { get_request } from '../Request';
 import { useNavigate } from 'react-router-dom';
 
-const fetchProblems = async ({ page, filter }) => {
+/**
+ * Custom hook to debounce a value by a specified delay in milliseconds.
+ * Prevents making API requests on every single keystroke.
+ */
+function useDebounce(value, delay = 500) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+/**
+ * Fetches paginated and filtered problems from the API endpoint.
+ */
+const fetchProblems = async ({ page, search }) => {
   const params = new URLSearchParams({ page });
-  if (filter.code) params.append("code", filter.code);
-  if (filter.name) params.append("name", filter.name);
-  if (filter.authors) params.append("authors", filter.authors);
+  if (search) params.append("search", search);
   
   const res = await get_request(`/problems?${params.toString()}`);
   return res?.data || { items: [], pages: 1, total: 0, page: 1, size: 10 };
@@ -16,27 +37,30 @@ const fetchProblems = async ({ page, filter }) => {
 export default function ProblemList() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const [filter, setFilter] = useState({ code: '', name: '', authors: '' });
+  const [search, setSearch] = useState('');
 
-  // Query state từ React Query
+  // Debounce search input by 500ms (0.5s)
+  const debouncedSearch = useDebounce(search, 500);
+
+  // React Query state management with debounced search value
   const { data, isLoading, isPlaceholderData } = useQuery({
-    queryKey: ['problems', { page, filter }],
-    queryFn: () => fetchProblems({ page, filter }),
-    staleTime: 1000 * 60 * 5,
+    queryKey: ['problems', { page, search: debouncedSearch }],
+    queryFn: () => fetchProblems({ page, search: debouncedSearch }),
+    staleTime: 1000 * 60,
     placeholderData: (prev) => prev,
   });
   
-  // Trích xuất danh sách bài tập (items) và tổng số trang (pages) từ JSON API mới
+  // Extract items list and total page count from API response
   const problems = data?.items || [];
   const totalPages = data?.pages || 1;
 
-  const onFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilter(prev => ({ ...prev, [name]: value }));
-    setPage(1); // Reset về trang 1 khi lọc
+  // Handle search input change and reset to first page
+  const onSearchChange = (e) => {
+    setSearch(e.target.value);
+    setPage(1);
   };
 
-  // Tính toán các nút phân trang hiển thị
+  // Compute pagination range with dynamic ellipsis
   const pagesToShow = useMemo(() => {
     const startCount = 2, endCount = 2, middleCount = 6;
     if (totalPages <= startCount + middleCount + endCount) {
@@ -68,82 +92,67 @@ export default function ProblemList() {
   return (
     <>
       <h1 className="title">Problems</h1>
-      <div className="box">
-        
-        {/* Pagination */}
-        <nav className="pagination is-centered" role="navigation" aria-label="pagination">
-          <button 
-            className="pagination-previous"
-            onClick={(e) => { e.preventDefault(); setPage(p => Math.max(1, p - 1)); }}
-            disabled={page <= 1}
-          >
-            Previous
-          </button>
-          <button 
-            className="pagination-next"
-            onClick={(e) => { e.preventDefault(); setPage(p => Math.min(totalPages, p + 1)); }}
-            disabled={page >= totalPages}
-          >
-            Next
-          </button>
+      {/* Top Control Bar: Search Input & Pagination aligned on single row */}
+      <div className="level">
+        {/* Search Field */}
+        <div className='level-left'>
+          <div className="level-item">
+            <input className="input" type="text" placeholder="Search code or name..." value={search} onChange={onSearchChange} />
+          </div>
+        </div>
 
-          <ul className="pagination-list">
-            {pagesToShow.map((p, i) => {
-              const prev = pagesToShow[i - 1];
-              return (
-                <React.Fragment key={p}>
-                  {prev && p - prev > 1 && <li><span className="pagination-ellipsis">&hellip;</span></li>}
-                  <li>
-                    <button 
-                      className={`pagination-link ${page === p ? 'is-current' : ''}`} 
-                      onClick={() => setPage(p)}
-                    >
-                      {p}
-                    </button>
-                  </li>
-                </React.Fragment>
-              );
-            })}
-          </ul>
-        </nav>
-
-        {/* Problems Table */}
-        <table className="table is-hoverable is-fullwidth" width="100%">
-          <thead>
-            <tr>
-              <th width="20%">Code</th>
-              <th>Name</th>
-              <th width="30%">Authors</th>
-            </tr>
-            <tr>
-              <th><input className="input" type="text" placeholder="Filter Code" name="code" value={filter.code} onChange={onFilterChange} /></th>
-              <th><input className="input" type="text" placeholder="Filter Name" name="name" value={filter.name} onChange={onFilterChange} /></th>
-              <th><input className="input" type="text" placeholder="Filter Authors" name="authors" value={filter.authors} onChange={onFilterChange} /></th>
-            </tr>
-          </thead>
-          
-          <tbody style={{ opacity: isPlaceholderData ? 0.6 : 1 }}> 
-            {isLoading ? (
-              <tr><td colSpan={3} style={{ textAlign: 'center' }}>Loading problems…</td></tr>
-            ) : problems.length === 0 ? (
-              <tr><td colSpan={3} style={{ textAlign: 'center' }}>No problems match your filters</td></tr>
-            ) : (
-              problems.map((p) => (
-                <tr key={p.code} style={{ cursor: 'pointer' }} onClick={() => navigate(`/p/${p.code}`)}>
-                  <td>{p.code}</td>
-                  <td>{p.name}</td>
-                  <td>
-                    {Array.isArray(p.authors) 
-                      ? p.authors.map(a => (typeof a === 'string' ? a : a.username || a.name)).join(', ')
-                      : (p.authors || '')}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-
+        {/* Pagination Controls */}
+        <div className='level-right'>
+          <nav className="level-item pagination is-centered" role="navigation" aria-label="pagination">
+            <button className="pagination-previous" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
+              Previous
+            </button>
+            <button className="pagination-next" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+              Next
+            </button>
+            <ul className="pagination-list">
+              {pagesToShow.map((p) => (
+                <li key={p}>
+                  <button className={`pagination-link ${page === p ? 'is-current' : ''}`} onClick={() => setPage(p)}>
+                    {p}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
       </div>
+
+      {/* Problems Data Table */}
+      <table className="table is-hoverable is-fullwidth" width="100%">
+        <thead>
+          <tr>
+            <th width="20%">Code</th>
+            <th>Name</th>
+            <th width="30%">Authors</th>
+          </tr>
+        </thead>
+        
+        <tbody> 
+          {isLoading ? (
+            <tr><td colSpan={3} style={{ textAlign: 'center' }}>Loading problems…</td></tr>
+          ) : problems.length === 0 ? (
+            <tr><td colSpan={3} style={{ textAlign: 'center' }}>No problems found</td></tr>
+          ) : (
+            problems.map((p) => (
+              <tr key={p.code} style={{ cursor: 'pointer' }} onClick={() => navigate(`/p/${p.code}`)}>
+                <td>{p.code}</td>
+                <td>{p.name}</td>
+                <td>
+                  {Array.isArray(p.authors) 
+                    ? p.authors.map(a => (typeof a === 'string' ? a : a.username || a.name)).join(', ')
+                    : (p.authors || '')}
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
     </>
   );
 }

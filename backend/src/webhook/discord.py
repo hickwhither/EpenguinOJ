@@ -32,7 +32,7 @@ def is_user_exists(session: SessionDep, discord_id:str):
 
 @router.post("/create")
 def create_verify(data: VerifyCreateRequest):
-    expire = datetime.now(timezone.utc) + timedelta(minutes=5)
+    expire = datetime.now() + timedelta(minutes=5)
     payload = {
         "discord_id": data.discord_id,
         "exp": expire

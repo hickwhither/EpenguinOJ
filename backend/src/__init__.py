@@ -41,8 +41,8 @@ def create_app():
     from .admin import admin_app
     app.mount("/admin", admin_app)
 
-    from .routers.user import router as api_router
-    from .routers.webhook import router as judger_router
+    from .user import router as api_router
+    from .webhook import router as judger_router
     app.include_router(api_router)
     app.include_router(judger_router)
 

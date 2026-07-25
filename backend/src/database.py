@@ -26,33 +26,6 @@ def get_session():
 
 def init_db():
     SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        statement = select(Problem).where(Problem.code=="aplusb")
-        results = session.exec(statement)
-        if results.one_or_none() == None:  # Import meta problem
-            programs = {}
-            if os.path.exists("example/aplusb"):
-                for root, dirs, files in os.walk("example/aplusb"):
-                    for file in files:
-                        if file.endswith(".cpp"):
-                            cpp_file_path = os.path.join(root, file)
-                            with open(cpp_file_path, "r", encoding="utf-8") as f:
-                                source = f.read()
-
-                config = json.load(open("example/aplusb/config.json", "r", encoding="utf-8"))
-                statement_content = open("example/aplusb/statement.md", "r", encoding="utf-8").read()
-
-                aplusb = Problem(
-                    code="aplusb",
-                    name="A plus B",
-                    is_public=True,
-                    statement=statement_content,
-                    programs=programs,
-                    **config
-                )
-                session.add(aplusb)
-                session.commit()
-                session.refresh(aplusb)
 
 
 SessionDep = Annotated[Session, Depends(get_session)]

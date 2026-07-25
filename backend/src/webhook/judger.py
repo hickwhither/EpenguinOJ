@@ -7,7 +7,7 @@ import os
 
 from src.database import SessionDep
 from src.models.submission import Submission, SUBMISSION_STATUS
-from src.models.problem import Problem, ProblemBase
+from src.models.problem import Problem, ProblemPublic
 
 # CONFIGURATIONS
 router = APIRouter(prefix="/judger", tags=["webhook.judger"])
@@ -27,7 +27,7 @@ class SubmissionJudge(BaseModel):
     id: int
     language: str
     source: str
-    problem: ProblemBase
+    problem: ProblemPublic
 
 
 # -- DEPENDENCIES / FUNCTIONS --
