@@ -13,6 +13,7 @@ from src.models import Problem, ProblemPublic, ProblemView
 from src.models import Submission, SubmissionPublic, SubmissionView
 from src.dependencies.contest import get_contest_or_404, ensure_contest_running, ensure_can_view_problem_contest
 from src.dependencies.user import verify_auth, get_user_or_404
+from src.webhook.judger import notify_task_available
 
 
 # CONFIGURATION
@@ -108,6 +109,7 @@ def submit_code(
     session.add(new_submission)
     session.commit()
     session.refresh(new_submission)
+    notify_task_available()
 
     return new_submission.id
 

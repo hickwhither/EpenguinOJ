@@ -26,6 +26,7 @@ import ContestLayout from './pages/ContestLayout'
 import ContestInfo from './pages/ContestLayouts/ContestInfo'
 import ContestRanking from './pages/ContestLayouts/ContestRanking'
 import SubmissionList from './pages/SubmissionList'
+import JudgerInfo from './pages/JudgerInfo'
 
 const queryClient = new QueryClient()
 
@@ -53,6 +54,7 @@ function App() {
             <Route path="ranking" element={<ContestRanking />} />
           </Route>
           <Route path="/contests" element={<RequireAuth><ContestList /></RequireAuth>} />
+          <Route path="/judgers" element={<RequireAuth><JudgerInfo /></RequireAuth>} />
           
 
           <Route path="*" element={<NotFound />} />
