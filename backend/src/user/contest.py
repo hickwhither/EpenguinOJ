@@ -106,8 +106,8 @@ def get_contest(
     running = is_contest_running(contest_db)
     is_participant = is_contest_participant(session, contest_db, current_user)
     contest_view = ContestView.model_validate(contest_db)
-    contest_view.is_registered = running
-    if not running and not is_participant:
+    contest_view.is_registered = is_participant
+    if not running or not is_participant:
         contest_view.problems = None
     return contest_view
 
