@@ -41,7 +41,7 @@ class SubmissionAdmin(SqlAlchemyModelAdmin):
 @register(UserHack, sqlalchemy_sessionmaker=async_session_maker)
 class UserHackAdmin(SqlAlchemyModelAdmin):
     menu_section = "Judging"
-    list_display = ("id", "date_created", "status", "percentage", "language", "user_id", "problem_id", "contest_id")
+    list_display = ("id", "date_created", "status", "percentage", "language", "subtask_id", "submission_id", "user_id")
     list_display_links = ("id",)
     list_filter = ("status", "language", "judger_name")
     search_fields = ("source", "error")
