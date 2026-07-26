@@ -1,31 +1,35 @@
 import os
-import json
-from typing import Annotated
+from typing import Annotated, AsyncGenerator
 from fastapi import Depends
-from sqlmodel import SQLModel, create_engine, Session, select
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from .models import *
 
-def get_database_url():
-    return os.getenv('DATABASE_URL') or "sqlite:///database.db"
+def get_database_url() -> str:
+    return os.getenv('DATABASE_URL', "sqlite+aiosqlite:///database.db")
 
 
-def get_engine_kwargs(database_url: str):
-    if database_url.startswith("sqlite"):
-        return {"connect_args": {"check_same_thread": False}}
-    return {}
+database_url = get_database_url()
+print(database_url)
+engine = create_async_engine(database_url)
+
+async_session_maker = async_sessionmaker(
+    engine, 
+    class_=AsyncSession, 
+    expire_on_commit=False
+)
 
 
-engine = create_engine(get_database_url(), **get_engine_kwargs(get_database_url()))
-
-
-def get_session():
-    with Session(engine) as session:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    async with async_session_maker() as session:
         yield session
 
 
-def init_db():
-    SQLModel.metadata.create_all(engine)
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
 
 
-SessionDep = Annotated[Session, Depends(get_session)]
+SessionDep = Annotated[AsyncSession, Depends(get_session)]

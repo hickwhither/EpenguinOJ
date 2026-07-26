@@ -24,24 +24,58 @@ class ProblemView(ProblemPublic):
 
 class Problem(ProblemView, table=True):
     is_public: bool = Field(default=False, index=True)
-    answer: str = Field()
-    tests: Optional[dict[str, dict[str, Any]]] = Field(default_factory=dict, sa_column=Column(JSON))
+    answer: str = Field(sa_type=TEXT)
+    checker: Optional[str] = Field(sa_type=TEXT)
     submissions: list["Submission"] = Relationship(back_populates="problem", cascade_delete=True)
-    hacks: list["Hack"] = Relationship(back_populates="problem", cascade_delete=True)
+    subtasks: list["Subtask"] = Relationship(back_populates="problem", cascade_delete=True)
 
     def __str__(self): return self.name
     def __repr__(self): return f"Problem({self.name})"
 
 
+class SubtaskPublic(SQLModel):
+    id: Optional[int] = Field(primary_key=True)
+    name: Optional[str] = Field(index=True)
+    description: Optional[str] = Field(sa_type=TEXT)
+    points: int = Field(default=1)
+
+
+class SubtaskView(SubtaskPublic): # For Judgers can see what in here
+    generator: str = Field(sa_type=TEXT)
+    validator: str = Field(sa_type=TEXT)
+    seeds: list[Any] = Field(default_factory=list, sa_column=Column(JSON))
+
+
+class Subtask(SubtaskView, table=True):
+    problem_id: int = Field(foreign_key="problem.id", ondelete="CASCADE")
+    problem: Problem = Relationship(back_populates="subtasks")
+    hacks: list["Hack"] = Relationship(back_populates="subtask", cascade_delete=True)
+    userhacks: list["UserHack"] = Relationship(back_populates="subtask", cascade_delete=True)
+
+    def __str__(self): return self.name
+
+
 class Hack(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True)
-    batch: Optional[str] = Field(index=True)
+    name: Optional[str] = Field(index=True)
+    description: Optional[str] = Field(sa_type=TEXT)
     language: str = Field(index=True)
     source: str = Field(sa_type=TEXT)
-    verified: bool = Field(default=False)
 
-    user_id: Optional[int] = Field(foreign_key="user.id", ondelete="SET NULL")
-    problem_id: int = Field(foreign_key="problem.id", ondelete="CASCADE")
+    subtask_id: int = Field(foreign_key="subtask.id", ondelete="CASCADE")
+    subtask: Subtask = Relationship(back_populates="hacks")
 
-    user: Optional["User"] = Relationship(back_populates="hacks")
-    problem: Problem = Relationship(back_populates="hacks")
+
+class UserHack(SQLModel, table=True):
+    id: Optional[int] = Field(primary_key=True)
+    language: str = Field(index=True)
+    source: str = Field(sa_type=TEXT)
+
+    subtask_id: int = Field(foreign_key="subtask.id", ondelete="CASCADE")
+    submission_id: int = Field(foreign_key="submission.id", ondelete="CASCADE")
+    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
+
+    subtask: Subtask = Relationship(back_populates="userhacks")
+    submission: "Submission" = Relationship(back_populates="userhacks")
+    user: "User" = Relationship(back_populates="userhacks")
+

@@ -18,6 +18,7 @@ $ sudo mysql
 ```
 
 ```sql
+DROP DATABASE IF EXISTS hwoj;
 CREATE DATABASE hwoj DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;
 GRANT ALL PRIVILEGES ON hwoj.* TO 'hwoj'@'localhost' IDENTIFIED BY '<mariadb user password>';
 exit
@@ -31,7 +32,7 @@ SHOW DATABASES WHERE `Database` NOT IN ('information_schema', 'mysql', 'performa
 SELECT User, Host FROM mysql.global_priv;
 
 mariadb-dump -u hwoj -p hwoj > backup_hwoj.sql -- Backup
-mariadb -u root -p hwoj < backup_hwoj.sql -- Restore
+mariadb -u hwoj -p hwoj < backup_hwoj.sql -- Restore
 
 DROP DATABASE IF EXISTS hwoj; -- Delete databases
 ```

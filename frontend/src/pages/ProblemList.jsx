@@ -27,7 +27,9 @@ function useDebounce(value, delay = 500) {
  * Fetches paginated and filtered problems from the API endpoint.
  */
 const fetchProblems = async ({ page, search, contest_id }) => {
-  const params = new URLSearchParams({ page, search, contest_id });
+  const params = new URLSearchParams({ page });
+  if (search) params.append('search', search);
+  if (contest_id) params.append('contest_id', contest_id);
   
   const res = await get_request(`/problems?${params.toString()}`);
   return res?.data || { items: [], pages: 1, total: 0, page: 1, size: 10 };

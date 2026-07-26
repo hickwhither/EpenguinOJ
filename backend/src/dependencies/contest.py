@@ -7,8 +7,8 @@ from src.models import User
 from src.models import Contest, ContestRegistration
 
 
-def get_contest_or_404(session: SessionDep, id: str) -> Contest:
-    contest = session.get(Contest, id)
+async def get_contest_or_404(session: SessionDep, id: str) -> Contest:
+    contest = await session.get(Contest, id)
     if not contest:
         raise HTTPException(404, "contest.notfound")
     return contest
@@ -21,7 +21,6 @@ def is_contest_running(contest: Contest) -> None:
     if now > contest.end_time:
         return False
     return True
-
 
 
 def ensure_contest_running(contest: Contest) -> None:
@@ -42,11 +41,11 @@ def ensure_registration_running(contest: Contest) -> None:
         raise HTTPException(403, "contest.ended")
 
 
-def is_contest_participant(session: SessionDep, contest: Contest, user: User) -> bool:
+async def is_contest_participant(session: SessionDep, contest: Contest, user: User) -> bool:
     return bool(session.get(ContestRegistration, (contest.id, user.id)))
 
 
-def ensure_can_view_problem_contest(contest: Contest, user: User, session: SessionDep) -> None:
-    if is_contest_participant(session, contest, user):
+async def ensure_can_view_problem_contest(contest: Contest, user: User, session: SessionDep) -> None:
+    if await is_contest_participant(session, contest, user):
         return
     raise HTTPException(403, "contest.not_registered")

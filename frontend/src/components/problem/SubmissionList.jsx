@@ -9,7 +9,11 @@ const getStatusTagClass = (percentage, status) => {
 };
 
 const fetchSubmissions = async ({ is_best, problem_id, contest_id, username, page }) => {
-  const params = new URLSearchParams({ is_best, problem_id, contest_id, username, page });
+  const params = new URLSearchParams({ is_best, page });
+  if (problem_id) params.append('problem_id', problem_id);
+  if (contest_id) params.append('contest_id', contest_id);
+  if (username) params.append('username', username);
+  
   const res = await get_request(`/submissions?${params.toString()}`);
   const responseData = res?.data || res;
   return {

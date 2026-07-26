@@ -2,7 +2,7 @@ from typing import *
 
 from .links import ContestTask, ContestRegistrationBase, ContestRegistration
 from .user import UserPublic, UserView, User
-from .problem import ProblemPublic, ProblemView, Problem
+from .problem import ProblemPublic, ProblemView, Problem, Subtask, Hack, UserHack
 from .submission import SubmissionPublic, SubmissionView, Submission, SUBMISSION_STATUS, SUBMISSION_VERDICT
 from .contest import ContestPublic, ContestView, Contest
 
@@ -21,7 +21,7 @@ class SubmissionView(SubmissionView):
 __all__ = [
     "ContestTask", "ContestRegistrationBase", "ContestRegistration",
     "UserPublic", "UserView", "User",
-    "ProblemPublic", "ProblemView", "Problem",
+    "ProblemPublic", "ProblemView", "Problem", "Subtask", "Hack", "UserHack",
     "ContestPublic", "ContestView", "Contest",
     "SubmissionPublic", "SubmissionView", "Submission", "SUBMISSION_STATUS", "SUBMISSION_VERDICT",
 

@@ -9,24 +9,24 @@ def create_auth(request: Request, user: User): request.session['id'] = user.id
 def delete_auth(request: Request): request.session.pop('auth', None)
 
 
-def verify_auth(request: Request, session: SessionDep) -> User:
+async def verify_auth(request: Request, session: SessionDep) -> User:
     id = request.session.get("id")
     if not id:
         raise HTTPException(401, "user.not_authenticated")
-    user = session.get(User, id)
+    user = await session.get(User, id)
     if not user:
         raise HTTPException(401, "user.not_authenticated")
     return user
 
 
-def get_user_or_404(session: SessionDep, username: str) -> User | None:
+async def get_user_or_404(session: SessionDep, username: str) -> User | None:
     statement = select(User).where(User.username == username)
-    results = session.exec(statement)
+    results = await session.exec(statement)
     user = results.one_or_none()
     if not user:
         raise HTTPException(404, "user.notfound")
     return user
 
 
-def verify_permissions(request: Request, session: SessionDep) -> User:
+async def verify_permissions(request: Request, session: SessionDep) -> User:
     user = verify_auth(request, session)

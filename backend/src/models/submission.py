@@ -7,7 +7,7 @@ from sqlalchemy import Index
 
 if TYPE_CHECKING:
     from .user import User
-    from .problem import Problem
+    from .problem import Problem, UserHack
     from .contest import Contest
 
 
@@ -66,6 +66,7 @@ class Submission(SubmissionView, table=True):
     user: "User" = Relationship(back_populates="submissions")
     contest: Optional["Contest"] = Relationship(back_populates="submissions")
     problem: "Problem" = Relationship(back_populates="submissions")
+    userhacks: "UserHack" = Relationship(back_populates="submission")
 
     def __str__(self): return f"{self.id}(by {self.user.username})"
     def __repr__(self): return f"Submission({self.id} by {self.user.username})"

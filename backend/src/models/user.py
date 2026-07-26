@@ -6,7 +6,7 @@ import random
 from .links import ContestRegistration
 
 if TYPE_CHECKING:
-    from .problem import Hack
+    from .problem import UserHack
     from .submission import Submission
     from .contest import Contest
 
@@ -53,9 +53,9 @@ class User(UserView, table=True):
     date_joined: datetime = Field(default_factory=datetime.now, index=True)
 
     # Relationships
-    registrations: list[ContestRegistration] = Relationship(back_populates="user")
+    registrations: list[ContestRegistration] = Relationship(back_populates="user", cascade_delete=True)
     submissions: list["Submission"] = Relationship(back_populates="user", cascade_delete=True)
-    hacks: list["Hack"] = Relationship(back_populates="user", cascade_delete=True)
+    userhacks: list["UserHack"] = Relationship(back_populates="user", cascade_delete=True)
 
     def __str__(self): return self.username
     def __repr__(self):return f"User({self.username}-{self.discord_id or self.email})"
