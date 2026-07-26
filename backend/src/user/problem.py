@@ -8,7 +8,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import paginate
 
 from src.database import SessionDep
-from src.models import User
+from src.models import User, Contest
 from src.models import Problem, ProblemPublic, ProblemView
 from src.models import Submission, SubmissionPublic, SubmissionView
 from src.dependencies.contest import get_contest_or_404, ensure_contest_running, ensure_can_view_problem_contest
@@ -37,9 +37,18 @@ def get_problem_or_404(session: SessionDep, id: str) -> Problem:
 @router.get("/problems", response_model=Page[ProblemPublic])
 def get_list_problem(
     session: SessionDep,
-    search: str | None = None
+    search: str | None = None,
+    contest_id: str | None = None,
+    current_user: User = Depends(verify_auth)
 ):
-    query = select(Problem).where(Problem.is_public == True)
+    # Contest
+    if contest_id:
+        contest = get_contest_or_404(session, contest_id)
+        ensure_contest_running(contest)
+        ensure_can_view_problem_contest(contest, current_user, session)
+        query = select(Problem).join(Contest.problems).where(Contest.id == contest_id)
+    else:
+        query = select(Problem).where(Problem.is_public == True)
     # Filter by name
     if search:
         search_filter = f"%{search.strip()}%"

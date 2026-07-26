@@ -12,12 +12,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-
-// IMPORTANT: Import CSS của KaTeX để công thức Toán hiển thị đúng! (AI noi vay chu tui hok biet)
 import 'katex/dist/katex.min.css';
 
 const fetchProblem = async (problem_id, contest_id) => {
-  const params = new URLSearchParams({ problem_id, contest_id });
+  const params = new URLSearchParams();
+  if (problem_id) params.append('problem_id', problem_id);
+  if (contest_id) params.append('contest_id', contest_id);
 
   // GET /problem?problem_id=...&contest_id=...
   const res = await get_request(`/problem?${params.toString()}`);
@@ -26,19 +26,22 @@ const fetchProblem = async (problem_id, contest_id) => {
 
 export default function ProblemDisplay() {
   const { problem_id, contest_id } = useParams();
-
   const { current_user, loginRequired } = useAuth();
   
   // Modals State
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
-  const [submissionList, setSubmissionList] = useState({ isOpen: false, mode: 'status' });
-  const openSubmissionList = (mode) => setSubmissionList({ isOpen: true, mode });
+  const [submissionList, setSubmissionList] = useState({isOpen:false});
+  const openSubmissionList = (mode) => {
+    if(mode=='status') return setSubmissionList(({isOpen: true, title:'Submissions'}) );
+    if(mode=='my-submissions') return setSubmissionList(({isOpen: true, title:'My Submissions', username:current_user.username }) );
+    if(mode=='leaderboard') return setSubmissionList(({isOpen: true, title: 'Leaderboard', is_best:true }) );
+  }
   const closeSubmissionList = () => setSubmissionList(prev => ({ ...prev, isOpen: false }));
 
   const { data: p = {}, isLoading, error } = useQuery({
     queryKey: ['problem', problem_id, contest_id],
     queryFn: () => fetchProblem(problem_id, contest_id),
-    enabled: !!problem_id, // Chỉ chạy query khi có problem_id
+    enabled: !!problem_id,
     staleTime: 1000 * 60,
   });
 
@@ -79,21 +82,21 @@ export default function ProblemDisplay() {
             className="button is-info" 
             title='All submissions'
           >
-            <i className="fas fa-signal"/>
+            <i className="fa-solid fa-signal"/>
           </button>
           <button 
             onClick={() => openSubmissionList('my-submissions')} 
             className="button is-info" 
             title='My submissions'
           >
-            <i className="fas fa-user-circle"/>
+            <i className="fa-solid fa-user-circle"/>
           </button>
           <button 
             onClick={() => openSubmissionList('leaderboard')} 
             className="button is-link" 
             title='Leaderboard'
           >
-            <i className="fas fa-crown"/>
+            <i className="fa-solid fa-crown"/>
           </button>
         </div>
         
@@ -148,10 +151,9 @@ export default function ProblemDisplay() {
       <SubmissionList 
         isOpen={submissionList.isOpen}
         onClose={closeSubmissionList}
+        title={submissionList.title}
         problem_id={p.id || problem_id}
-        problem_name={p.name}
         contest_id={contest_id}
-        mode={submissionList.mode}
         username={current_user?.username || ""}
       />
     </div>

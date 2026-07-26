@@ -20,6 +20,10 @@ router = APIRouter(prefix="/contest", tags=["user.contest"], dependencies=[Depen
 class ContestPublic(ContestPublic): is_registered: bool = False
 class ContestView(ContestView): is_registered: bool = False
 
+class SimpleContestRegistration(ContestRegistrationBase):
+    user: "UserPublic"
+    contest: "ContestPublic"
+
 
 class ContestRegisterRequest(BaseModel):
     password: Optional[str] = None
@@ -127,4 +131,16 @@ def register_contest(
         session.add(ContestRegistration(contest_id=contest.id, user_id=current_user.id))
         session.commit()
     return
+
+
+@router.get("/{id}/ranking", response_model=list[SimpleContestRegistration])
+def get_contest(
+    session: SessionDep,
+    id: str,
+    current_user: User = Depends(verify_auth),
+):
+    contest = get_contest_or_404(session, id)
+    ensure_contest_running(contest)
+    ensure_can_view_problem_contest(contest, current_user, session)
+    return contest.registrations
 

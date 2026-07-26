@@ -6,7 +6,7 @@ from sqlmodel import select
 
 from src.database import SessionDep
 from src.models import User
-from src.dependencies.user import create_auth
+from src.dependencies.user import create_auth, get_user_or_404
 
 # CONFIGURATION
 from src.dependencies import hash_password, verify_password
@@ -73,11 +73,11 @@ def confirm_create_account(
     discord_id = decode_discord_token(data.secret)
 
     # Check for existing records
-    if session.get(User, data.username):
+    if session.exec(select(User).where(User.username == data.username)).one_or_none():
         raise HTTPException(400, "confirm.exist_username")
-    if session.exec(select(User).where(User.email == data.email)).first():
+    if session.exec(select(User).where(User.email == data.email)).one_or_none():
         raise HTTPException(400, "confirm.exist_email")
-    if session.exec(select(User).where(User.discord_id == discord_id)).first():
+    if session.exec(select(User).where(User.discord_id == discord_id)).one_or_none():
         raise HTTPException(400, "confirm.exist_discord_id")
     new_user = User(
         username=data.username,

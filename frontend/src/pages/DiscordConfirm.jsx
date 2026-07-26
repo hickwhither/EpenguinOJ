@@ -13,14 +13,21 @@ export default function DiscordConfirm() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
+
   const [isCheckingToken, setIsCheckingToken] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // State error
+  const [formErrors, setFormErrors] = useState({
+    username: '',
+    email: '',
+    password: '',
+  });
+
   useEffect(() => {
     if (!action || !secret) {
-      toast.error("Đường dẫn thiếu thông tin xác nhận.");
+      toast.error("Confirmation link is missing required parameters.");
       navigate('/', { replace: true });
       return;
     }
@@ -30,11 +37,9 @@ export default function DiscordConfirm() {
 
   const validateTokenAndProceed = async () => {
     setIsCheckingToken(true);
-
     const checkRes = await post_request('/confirm/check', { secret });
-
     if (!checkRes || checkRes.status < 200 || checkRes.status >= 300) {
-      const errorMsg = checkRes?.data?.detail || "Token không hợp lệ hoặc đã hết hạn.";
+      const errorMsg = checkRes?.data?.detail || "Invalid or expired token.";
       toast.error(errorMsg);
       navigate('/', { replace: true });
       return;
@@ -48,23 +53,62 @@ export default function DiscordConfirm() {
   const handleQuickLogin = async () => {
     setLoading(true);
     setError(null);
-    
     const res = await post_request('/confirm/quick-login', { secret });
-
     if (res && res.status >= 200 && res.status < 300) {
-      toast.success("Đăng nhập thành công!");
+      toast.success("Login successful!");
       navigate('/', { replace: true });
     } else {
-      toast.error(res?.data?.detail || "Đăng nhập nhanh thất bại.");
+      toast.error(res?.data?.detail || "Quick login failed.");
       navigate('/', { replace: true });
     }
     setLoading(false);
   };
 
+  // Validate phía Client trước khi gửi Request
+  const validateForm = () => {
+    let isValid = true;
+    const errors = { username: '', email: '', password: '' };
+    if (action === 'create_account') {
+      const usernameRegex = /^[a-zA-Z_]+$/;
+      if (!username.trim()) {
+        errors.username = 'Username is required.';
+        isValid = false;
+      } else if (!usernameRegex.test(username)) {
+        errors.username = 'Username can only contain letters (A-Z, a-z) and underscores (_).';
+        isValid = false;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email.trim()) {
+        errors.email = 'Email is required.';
+        isValid = false;
+      } else if (!emailRegex.test(email)) {
+        errors.email = 'Please enter a valid email address.';
+        isValid = false;
+      }
+    }
+
+    if (action === 'create_account' || action === 'change_password') {
+      if (!password) {
+        errors.password = 'Password is required.';
+        isValid = false;
+      } else if (password.length < 6) {
+        errors.password = 'Password must be at least 6 characters.';
+        isValid = false;
+      }
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    if (!validateForm()) return;
+
+    setLoading(true);
 
     let endpoint = '';
     let payload = { secret };
@@ -76,7 +120,7 @@ export default function DiscordConfirm() {
       endpoint = '/confirm/reset-password';
       payload = { secret, password };
     } else {
-      toast.error("Hành động không hợp lệ.");
+      toast.error("Invalid action.");
       navigate('/', { replace: true });
       return;
     }
@@ -85,21 +129,27 @@ export default function DiscordConfirm() {
 
     if (res && res.status >= 200 && res.status < 300) {
       toast.success(
-        action === 'create_account' 
-          ? "Tạo tài khoản thành công!" 
-          : "Cập nhật mật khẩu thành công!"
+        action === 'create_account'
+          ? "Account created successfully!"
+          : "Password updated successfully!"
       );
       navigate('/', { replace: true });
     } else {
-      const errorMsg = res?.data?.detail || "Thực hiện thất bại.";
-      
-      // (401, 408) redirect to home
+      const errorMsg = res?.data?.detail || "Action failed.";
+
       if (res?.status === 401 || res?.status === 408) {
         toast.error(errorMsg);
         navigate('/', { replace: true });
       } else {
-        // validate form error (eg: exists username, email)
-        setError(errorMsg);
+        if (errorMsg === 'confirm.exist_username') {
+          setFormErrors((prev) => ({ ...prev, username: 'Username is already taken.' }));
+        } else if (errorMsg === 'confirm.exist_email') {
+          setFormErrors((prev) => ({ ...prev, email: 'Email address is already registered.' }));
+        } else if (errorMsg === 'confirm.exist_discord_id') {
+          setError('This Discord account is already linked to another user.');
+        } else {
+          setError(errorMsg);
+        }
       }
     }
     setLoading(false);
@@ -108,7 +158,10 @@ export default function DiscordConfirm() {
   if (isCheckingToken) {
     return (
       <div className="container section has-text-centered py-6">
-        <p className="subtitle">Đang kiểm tra thông tin xác nhận...</p>
+        <span className="icon is-large has-text-info mb-2">
+          <i className="fas fa-spinner fa-pulse fa-2x"></i>
+        </span>
+        <p className="subtitle">Verifying confirmation details...</p>
       </div>
     );
   }
@@ -116,81 +169,136 @@ export default function DiscordConfirm() {
   return (
     <div className="container section" style={{ maxWidth: '500px' }}>
       <div className="box">
-        <h1 className="title has-text-centered">
-          {action === 'create_account' && 'Tạo tài khoản Discord'}
-          {action === 'change_password' && 'Đặt lại mật khẩu'}
-          {action === 'quick_login' && 'Đăng nhập nhanh'}
+        <h1 className="title has-text-centered is-size-4">
+          {action === 'create_account' && (
+            <>
+              <i className="fas fa-user-plus mr-2"></i> Create Discord Account
+            </>
+          )}
+          {action === 'change_password' && (
+            <>
+              <i className="fas fa-key mr-2"></i> Reset Password
+            </>
+          )}
+          {action === 'quick_login' && (
+            <>
+              <i className="fas fa-bolt mr-2"></i> Quick Login
+            </>
+          )}
         </h1>
-        
+
+        {/* General error */}
         {error && (
           <div className="notification is-danger is-light">
+            <button className="delete" onClick={() => setError(null)}></button>
             {error}
           </div>
         )}
 
         {action === 'quick_login' ? (
           <div className="has-text-centered py-5">
-            <p className="subtitle">Đang xử lý đăng nhập...</p>
+            <span className="icon is-large has-text-primary mb-3">
+              <i className="fas fa-circle-notch fa-spin fa-2x"></i>
+            </span>
+            <p className="subtitle">Processing login...</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             {action === 'create_account' && (
               <>
+                {/* Username Input */}
                 <div className="field">
-                  <label className="label">Tên đăng nhập</label>
-                  <div className="control">
-                    <input 
-                      className="input" 
-                      type="text" 
-                      placeholder="Nhập username..." 
+                  <label className="label">Username</label>
+                  <div className="control has-icons-left">
+                    <input
+                      className={`input ${formErrors.username ? 'is-danger' : ''}`}
+                      type="text"
+                      placeholder="e.g. john_doe"
                       value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      onChange={(e) => {
+                        setUsername(e.target.value);
+                        if (formErrors.username) setFormErrors({ ...formErrors, username: '' });
+                      }}
                       required
                     />
+                    <span className="icon is-small is-left">
+                      <i className="fas fa-user"></i>
+                    </span>
                   </div>
+                  {formErrors.username ? (
+                    <p className="help is-danger">{formErrors.username}</p>
+                  ) : (
+                    <p className="help is-hint">Only letters (A-Z, a-z) and underscores (_)</p>
+                  )}
                 </div>
 
+                {/* Email Input */}
                 <div className="field">
                   <label className="label">Email</label>
-                  <div className="control">
-                    <input 
-                      className="input" 
-                      type="email" 
-                      placeholder="example@gmail.com" 
+                  <div className="control has-icons-left">
+                    <input
+                      className={`input ${formErrors.email ? 'is-danger' : ''}`}
+                      type="email"
+                      placeholder="example@gmail.com"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (formErrors.email) setFormErrors({ ...formErrors, email: '' });
+                      }}
                       required
                     />
+                    <span className="icon is-small is-left">
+                      <i className="fas fa-envelope"></i>
+                    </span>
                   </div>
+                  {formErrors.email && (
+                    <p className="help is-danger">{formErrors.email}</p>
+                  )}
                 </div>
               </>
             )}
 
+            {/* Password Input */}
             {(action === 'create_account' || action === 'change_password') && (
               <div className="field">
                 <label className="label">
-                  {action === 'change_password' ? 'Mật khẩu mới' : 'Mật khẩu'}
+                  {action === 'change_password' ? 'New Password' : 'Password'}
                 </label>
-                <div className="control">
-                  <input 
-                    className="input" 
-                    type="password" 
-                    placeholder="Nhập mật khẩu..." 
+                <div className="control has-icons-left">
+                  <input
+                    className={`input ${formErrors.password ? 'is-danger' : ''}`}
+                    type="password"
+                    placeholder="Enter password..."
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (formErrors.password) setFormErrors({ ...formErrors, password: '' });
+                    }}
                     required
                   />
+                  <span className="icon is-small is-left">
+                    <i className="fas fa-lock"></i>
+                  </span>
                 </div>
+                {formErrors.password && (
+                  <p className="help is-danger">{formErrors.password}</p>
+                )}
               </div>
             )}
 
+            {/* Submit Button */}
             <div className="field mt-5">
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className={`button is-primary is-fullwidth ${loading ? 'is-loading' : ''}`}
                 disabled={loading}
               >
-                {action === 'create_account' ? 'Đăng ký & Đăng nhập' : 'Cập nhật mật khẩu'}
+                <span className="icon">
+                  <i className={action === 'create_account' ? 'fas fa-check' : 'fas fa-save'}></i>
+                </span>
+                <span>
+                  {action === 'create_account' ? 'Register & Sign In' : 'Update Password'}
+                </span>
               </button>
             </div>
           </form>

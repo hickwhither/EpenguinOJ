@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { get_request, post_request } from '../Request';
+import { get_request } from '../Request';
+import RegisterContestButton from '../components/contest/ContestRegister';
 
 /* --- HELPERS --- */
 function useDebounce(value, delay = 500) {
@@ -25,19 +26,6 @@ const calculateDuration = (startTime, endTime) => {
   return hours > 0 ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}` : `${minutes}m`;
 };
 
-// Tính toán trạng thái và nhãn nút đăng ký
-const getRegistrationStatus = (contest, now) => {
-  if (contest.is_registered) {
-    return { label: 'Registered', canRegister: false, isRegistered: true };
-  }
-  const regStart = contest.registration_start ? new Date(contest.registration_start) : null;
-  const regEnd = contest.registration_end ? new Date(contest.registration_end) : null;
-
-  if (regStart && now < regStart) return { label: 'Registration Upcoming', canRegister: false };
-  if (regEnd && now > regEnd) return { label: 'Registration Ended', canRegister: false };
-  return { label: 'Register', canRegister: true };
-};
-
 /* --- API CALLS --- */
 const fetchOngoing = async () => (await get_request('/contest/ongoing'))?.data || [];
 const fetchUpcoming = async () => (await get_request('/contest/upcoming'))?.data || [];
@@ -48,26 +36,14 @@ const fetchEnded = async ({ page, search }) => {
   return res?.data || { items: [], total: 0, page: 1, pages: 1 };
 };
 
-/* --- REUSABLE CONTEST CARD COMPONENT --- */
-const ContestCard = ({ contest, type, onRegister, onViewDetails }) => {
-  const now = new Date();
-  const tagMap = {
-    ongoing: { label: 'Live', class: 'is-danger' },
-    upcoming: { label: 'Upcoming', class: 'is-warning' },
-    ended: { label: 'Ended', class: 'is-dark' },
-  };
-
-  const regStatus = type !== 'ended' ? getRegistrationStatus(contest, now) : null;
-
+/* --- CONTEST CARD COMPONENT --- */
+const ContestCard = ({ contest, type, onViewDetails, onRegisterSuccess }) => {
   return (
-    <div className="column is-12-mobile is-6-tablet is-4-desktop">
+    <div className="column is-12-mobile is-6-tablet is-4-desktop is-3-widescreen">
       <div className="box is-flex is-flex-direction-column h-100">
-        <div className="content">
-          <span className={`tag ${tagMap[type].class}`}>{tagMap[type].label}</span>
-          <h2 className="title is-5 mt-2 mb-0">{contest.name || `Contest #${contest.id}`}</h2>
-        </div>
+        <h2 className="title is-5 my-auto">{contest.name || `Contest #${contest.id}`}</h2>
 
-        <div className="content is-small my-2">
+        <div className="content is-3 my-2">
           <div><strong>Reg Start:</strong> {formatDate(contest.registration_start)}</div>
           <div><strong>Reg End:</strong> {formatDate(contest.registration_end)}</div>
           <div><strong>Start:</strong> {formatDate(contest.start_time)}</div>
@@ -81,13 +57,7 @@ const ContestCard = ({ contest, type, onRegister, onViewDetails }) => {
           </button>
 
           {type !== 'ended' && (
-            <button
-              className={`button is-fullwidth ${regStatus?.isRegistered ? 'is-success is-outlined' : 'is-success'}`}
-              onClick={() => onRegister(contest.id)}
-              disabled={!regStatus?.canRegister}
-            >
-              {regStatus?.label}
-            </button>
+            <RegisterContestButton contest={contest} onSuccess={onRegisterSuccess} />
           )}
         </div>
       </div>
@@ -125,15 +95,10 @@ export default function ContestList() {
   const endedList = endedData?.items || [];
   const totalPages = endedData?.pages || 1;
 
-  // Actions
-  const handleRegister = async (contestId) => {
-    try {
-      await post_request(`/contest/${contestId}/register`);
-      refetchOngoing();
-      refetchUpcoming();
-    } catch (error) {
-      console.error('Failed to register:', error);
-    }
+  // Callback làm mới danh sách sau khi đăng ký thành công
+  const handleRegisterSuccess = () => {
+    refetchOngoing();
+    refetchUpcoming();
   };
 
   const handleViewDetails = (id) => navigate(`/c/${id}`);
@@ -146,43 +111,55 @@ export default function ContestList() {
     <div className="container">
       <h1 className="title">Contests</h1>
 
-      {/* 1. ONGOING CONTESTS */}
+      {/* ONGOING CONTESTS */}
       <section className="mb-6">
         <h2 className="title is-4 has-text-danger">Ongoing Contests</h2>
         {loadingOngoing ? (
           <div className="box has-text-centered">Loading...</div>
         ) : ongoingList.length === 0 ? (
-          <div className="notification is-light">No ongoing contests at the moment.</div>
+          <div className="notification">No ongoing contests at the moment.</div>
         ) : (
           <div className="columns is-multiline">
             {ongoingList.map((c) => (
-              <ContestCard key={c.id} contest={c} type="ongoing" onRegister={handleRegister} onViewDetails={handleViewDetails} />
+              <ContestCard
+                key={c.id} 
+                contest={c}
+                type="ongoing"
+                onViewDetails={handleViewDetails}
+                onRegisterSuccess={handleRegisterSuccess}
+              />
             ))}
           </div>
         )}
       </section>
 
-      {/* 2. UPCOMING CONTESTS */}
+      {/* UPCOMING CONTESTS */}
       <section className="mb-6">
-        <h2 className="title is-4 has-text-warning-dark">Upcoming Contests</h2>
+        <h2 className="title is-4 has-text-warning">Upcoming Contests</h2>
         {loadingUpcoming ? (
           <div className="box has-text-centered">Loading...</div>
         ) : upcomingList.length === 0 ? (
-          <div className="notification is-light">No upcoming contests scheduled.</div>
+          <div className="notification">No upcoming contests scheduled.</div>
         ) : (
           <div className="columns is-multiline">
             {upcomingList.map((c) => (
-              <ContestCard key={c.id} contest={c} type="upcoming" onRegister={handleRegister} onViewDetails={handleViewDetails} />
+              <ContestCard
+                key={c.id}
+                contest={c}
+                type="upcoming"
+                onViewDetails={handleViewDetails}
+                onRegisterSuccess={handleRegisterSuccess}
+              />
             ))}
           </div>
         )}
       </section>
 
-      {/* 3. ENDED CONTESTS (Với Search & Pagination) */}
+      {/* ENDED CONTESTS */}
       <section className="mb-6">
         <h2 className="title is-4 has-text-grey">Past Contests</h2>
 
-        {/* Controls Header: Search + Pagination chỉ phục vụ Ended Contests */}
+        {/* Search / Pagination */}
         <div className="level mb-4">
           <div className="level-left">
             <div className="level-item">
@@ -223,11 +200,16 @@ export default function ContestList() {
         {loadingEnded ? (
           <div className="box has-text-centered">Loading ended contests...</div>
         ) : endedList.length === 0 ? (
-          <div className="notification is-light">No ended contests found.</div>
+          <div className="notification">No ended contests found.</div>
         ) : (
           <div className="columns is-multiline">
             {endedList.map((c) => (
-              <ContestCard key={c.id} contest={c} type="ended" onViewDetails={handleViewDetails} />
+              <ContestCard
+                key={c.id}
+                contest={c}
+                type="ended"
+                onViewDetails={handleViewDetails}
+              />
             ))}
           </div>
         )}

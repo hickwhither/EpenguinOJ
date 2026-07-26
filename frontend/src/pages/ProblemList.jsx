@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { get_request } from '../Request';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 /**
  * Custom hook to debounce a value by a specified delay in milliseconds.
@@ -26,9 +26,8 @@ function useDebounce(value, delay = 500) {
 /**
  * Fetches paginated and filtered problems from the API endpoint.
  */
-const fetchProblems = async ({ page, search }) => {
-  const params = new URLSearchParams({ page });
-  if (search) params.append("search", search);
+const fetchProblems = async ({ page, search, contest_id }) => {
+  const params = new URLSearchParams({ page, search, contest_id });
   
   const res = await get_request(`/problems?${params.toString()}`);
   return res?.data || { items: [], pages: 1, total: 0, page: 1, size: 10 };
@@ -38,14 +37,15 @@ export default function ProblemList() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const {contest_id} = useParams();
 
   // Debounce search input by 500ms (0.5s)
   const debouncedSearch = useDebounce(search, 500);
 
   // React Query state management with debounced search value
   const { data, isLoading, isPlaceholderData } = useQuery({
-    queryKey: ['problems', { page, search: debouncedSearch }],
-    queryFn: () => fetchProblems({ page, search: debouncedSearch }),
+    queryKey: ['problems', { page, search: debouncedSearch, contest_id }],
+    queryFn: () => fetchProblems({ page, search: debouncedSearch, contest_id }),
     staleTime: 1000 * 60,
     placeholderData: (prev) => prev,
   });
@@ -91,13 +91,11 @@ export default function ProblemList() {
 
   return (
     <>
-      <h1 className="title">Problems</h1>
-      {/* Top Control Bar: Search Input & Pagination aligned on single row */}
       <div className="level">
         {/* Search Field */}
         <div className='level-left'>
           <div className="level-item">
-            <input className="input" type="text" placeholder="Search code or name..." value={search} onChange={onSearchChange} />
+            <input className="input" type="text" placeholder="Search name..." value={search} onChange={onSearchChange} />
           </div>
         </div>
 
@@ -127,7 +125,7 @@ export default function ProblemList() {
       <table className="table is-hoverable is-fullwidth" width="100%">
         <thead>
           <tr>
-            <th width="20%">Code</th>
+            <th width="10%">ID</th>
             <th>Name</th>
             <th width="30%">Authors</th>
           </tr>
@@ -139,14 +137,15 @@ export default function ProblemList() {
           ) : problems.length === 0 ? (
             <tr><td colSpan={3} style={{ textAlign: 'center' }}>No problems found</td></tr>
           ) : (
-            problems.map((p) => (
-              <tr key={p.code} style={{ cursor: 'pointer' }} onClick={() => navigate(`/p/${p.code}`)}>
-                <td>{p.code}</td>
-                <td>{p.name}</td>
+            problems.map((problem) => (
+              <tr key={problem.id} style={{ cursor: 'pointer' }}
+                onClick={() => navigate(contest_id ? `/c/${contest_id}/p/${problem.id}` : `/p/${problem.id}`)}>
+                <td>{problem.id}</td>
+                <td>{problem.name}</td>
                 <td>
-                  {Array.isArray(p.authors) 
-                    ? p.authors.map(a => (typeof a === 'string' ? a : a.username || a.name)).join(', ')
-                    : (p.authors || '')}
+                  {Array.isArray(problem.authors) 
+                    ? problem.authors.map(a => (typeof a === 'string' ? a : a.username || a.name)).join(', ')
+                    : (problem.authors || '')}
                 </td>
               </tr>
             ))

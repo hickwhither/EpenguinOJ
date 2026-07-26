@@ -13,7 +13,11 @@ def create_app():
     init_db()
     add_pagination(app)
     
-    allow_origins = os.getenv("ALLOWED_ORIGINS").split() + ["localhost:5173", "127.0.0.1:5173"]
+    allow_origins = os.getenv("ALLOWED_ORIGINS", "").split() + [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+    ]
     print("ALLOWED ORIGINS", allow_origins)
 
     app.add_middleware(

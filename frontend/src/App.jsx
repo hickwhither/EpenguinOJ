@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastContainer, Bounce } from 'react-toastify'
 
@@ -22,7 +22,10 @@ import ProblemDisplay from './pages/ProblemDisplay'
 import ContestList from './pages/ContestList'
 import About from './pages/About'
 import NotFound from './pages/NotFound'
-import ContestDisplay from './pages/ContestDisplay'
+import ContestLayout from './pages/ContestLayout'
+import ContestInfo from './pages/ContestLayouts/ContestInfo'
+import ContestRanking from './pages/ContestLayouts/ContestRanking'
+import SubmissionList from './pages/SubmissionList'
 
 const queryClient = new QueryClient()
 
@@ -41,8 +44,14 @@ function App() {
 
           <Route path="/problems" element={<RequireAuth><ProblemList /></RequireAuth>} />
           <Route path="/p/:problem_id" element={<RequireAuth><ProblemDisplay /></RequireAuth>} />
-          <Route path="/c/:contest_id" element={<RequireAuth><ContestDisplay /></RequireAuth>} />
-          <Route path="/c/:contest_id/:problem_id" element={<RequireAuth><ProblemDisplay /></RequireAuth>} />
+          <Route path="/c/:contest_id" element={<RequireAuth><ContestLayout /></RequireAuth>}>
+            <Route path="" element={<ContestInfo />} />
+            <Route path="p" element={<ProblemList />} />
+            <Route path="p/:problem_id" element={<RequireAuth><ProblemDisplay /></RequireAuth>} />
+            <Route path="s" element={<SubmissionList />} />
+            <Route path="s/:problem_id" element={<SubmissionList />} />
+            <Route path="ranking" element={<ContestRanking />} />
+          </Route>
           <Route path="/contests" element={<RequireAuth><ContestList /></RequireAuth>} />
           
 

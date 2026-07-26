@@ -8,22 +8,10 @@ const getStatusTagClass = (percentage, status) => {
   return 'is-danger';
 };
 
-const fetchSubmissions = async ({ problem_id, mode, username, contest_id, page }) => {
-  const params = new URLSearchParams({ page });
-  
-  if (problem_id) params.append('problem_id', problem_id);
-  if (contest_id) params.append('contest_id', contest_id);
-
-  if (mode === 'leaderboard') {
-    params.append('is_best', 'true');
-  } else if (mode === 'my-submissions' && username) {
-    params.append('username', username);
-  }
-
+const fetchSubmissions = async ({ is_best, problem_id, contest_id, username, page }) => {
+  const params = new URLSearchParams({ is_best, problem_id, contest_id, username, page });
   const res = await get_request(`/submissions?${params.toString()}`);
   const responseData = res?.data || res;
-
-  // fastapi-pagination trả về { items: [...], pages: X, total: Y, page: Z, size: S }
   return {
     items: responseData?.items || (Array.isArray(responseData) ? responseData : []),
     pages: responseData?.pages || 1,
@@ -32,19 +20,18 @@ const fetchSubmissions = async ({ problem_id, mode, username, contest_id, page }
   };
 };
 
-export default function SubmissionList({ isOpen, onClose, problem_id, mode, username, contest_id }) {
+export default function SubmissionList({ isOpen, onClose, title, is_best=false, problem_id, contest_id, username }) {
   const [page, setPage] = useState(1);
 
-  // Reset về trang 1 khi thay đổi mode, problem_id, contest_id hoặc khi modal mở lại
   useEffect(() => {
     if (isOpen) {
       setPage(1);
     }
-  }, [isOpen, mode, problem_id, contest_id]);
+  }, [isOpen, title, is_best, problem_id, contest_id]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['submissions', { problem_id, mode, username, contest_id, page }],
-    queryFn: () => fetchSubmissions({ problem_id, mode, username, contest_id, page }),
+    queryKey: ['submissions', { is_best, problem_id, contest_id, username, page }],
+    queryFn: () => fetchSubmissions({ is_best, problem_id, contest_id, username, page }),
     staleTime: 1000 * 10,
     enabled: isOpen && !!problem_id,
     placeholderData: (prev) => prev,
@@ -54,22 +41,13 @@ export default function SubmissionList({ isOpen, onClose, problem_id, mode, user
   const totalPages = data?.pages || 1;
   const pageSize = data?.size || 50;
 
-  const isRank = mode === 'leaderboard';
-  const isMySubmissions = mode === 'my-submissions';
-
-  const getTitle = () => {
-    if (isRank) return '🏆 Leaderboard';
-    if (isMySubmissions) return '👤 Bài nộp của tôi';
-    return '📜 Tất cả bài nộp';
-  };
-
   return (
     <div className={`modal ${isOpen ? "is-active" : ""}`}>
       <div className="modal-background" onClick={onClose}></div>
       <div className="modal-content" style={{ width: '85%', maxWidth: '1000px' }}>
         <div className="box">
           <div className="is-flex is-justify-content-space-between is-align-items-center mb-4">
-            <h2 className="title is-4 mb-0">{getTitle()}</h2>
+            <h2 className="title is-4 mb-0">{title}</h2>
             {data?.total > 0 && (
               <span className="tag is-info is-light">Tổng cộng: {data.total} bài nộp</span>
             )}
@@ -83,38 +61,25 @@ export default function SubmissionList({ isOpen, onClose, problem_id, mode, user
             <>
               <div className="table-container">
                 <table className="table is-fullwidth is-striped is-hoverable">
-                  <thead>
-                    <tr>
-                      {isRank && <th width="8%">Hạng</th>}
-                      <th>ID</th>
-                      <th>Người nộp</th>
-                      <th>Ngôn ngữ</th>
-                      <th>Điểm / Kết quả</th>
-                      <th>Thời gian</th>
-                      <th>Bộ nhớ</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {list.map((sub, index) => (
-                      <tr key={sub.id}>
-                        {isRank && (
-                          <td>
-                            <strong>{(page - 1) * pageSize + index + 1}</strong>
-                          </td>
-                        )}
-                        <td>#{sub.id}</td>
-                        <td>{sub.user?.username || sub.username || 'N/A'}</td>
-                        <td><span className="tag is-white">{sub.language}</span></td>
+                  {list.map((sub, index) => (
+                    <tr key={sub.id}>
+                      {is_best && (
                         <td>
-                          <span className={`tag is-bold ${getStatusTagClass(sub.percentage, sub.status)}`}>
-                            {sub.percentage ?? 0}% {sub.status ? `(${sub.status})` : ''}
-                          </span>
+                          <strong>{(page - 1) * pageSize + index + 1}</strong>
                         </td>
-                        <td>{sub.time_used ?? 0} ms</td>
-                        <td>{sub.memory_used ? (sub.memory_used / 1024).toFixed(2) : 0} MB</td>
-                      </tr>
-                    ))}
-                  </tbody>
+                      )}
+                      <td>#{sub.id}</td>
+                      <td>{sub.user?.username || sub.username || 'N/A'}</td>
+                      <td><span className="tag is-white">{sub.language}</span></td>
+                      <td>
+                        <span className={`tag is-bold ${getStatusTagClass(sub.percentage, sub.status)}`}>
+                          {sub.percentage ?? 0}% {sub.status ? `(${sub.status})` : ''}
+                        </span>
+                      </td>
+                      <td>{sub.time_used ?? 0} ms</td>
+                      <td>{sub.memory_used ? (sub.memory_used / 1024).toFixed(2) : 0} MB</td>
+                    </tr>
+                  ))}
                 </table>
               </div>
 
