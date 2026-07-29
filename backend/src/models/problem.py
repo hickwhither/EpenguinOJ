@@ -70,7 +70,7 @@ class UserHack(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True)
     language: str = Field(index=True)
     source: str = Field(sa_type=TEXT)
-    status: 
+    status: Optional[str] = Field(default=None)
 
     subtask_id: int = Field(foreign_key="subtask.id", ondelete="CASCADE")
     submission_id: int = Field(foreign_key="submission.id", ondelete="CASCADE")

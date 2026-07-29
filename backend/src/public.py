@@ -9,6 +9,7 @@ class SubmissionPublic(BaseModel):
     
     # Cell 1
     percentage: float | None
+    max_score: float | None
     status: str
     language: str
 

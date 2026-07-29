@@ -1,28 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { get_request } from '../Request';
 
-// Trả về màu nền cho ô status bên trái
-const getStatusBgClass = (percentage, status) => {
-  if (percentage === 100 || status === 'AC') return 'has-background-success has-text-white';
-  if (percentage > 0) return 'has-background-warning-dark has-text-white';
-  if (status === 'CE' || status === 'AB') return 'has-background-grey-dark has-text-light';
+const STATUS_LABEL = { QW: 'Queued', C: 'Compiling', P: 'Processing', D: 'Done' };
+
+const getStatusBgClass = (score, status) => {
+  if (status === 'D' && score > 0) return 'has-background-success has-text-white';
+  if (status === 'D' && score === 0) return 'has-background-grey-light has-text-dark';
+  if (status === 'C' || status === 'P') return 'has-background-info has-text-white';
   return 'has-background-grey-light has-text-dark';
 };
 
-// Format ngày tháng cho gọn đẹp
 const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
   return date.toLocaleString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    day: '2-digit', month: '2-digit', year: 'numeric'
   });
 };
 
@@ -43,197 +39,179 @@ const fetchSubmissions = async ({ is_best, problem_id, contest_id, username, pag
   };
 };
 
-export default function ContestSubmissions() {
+function SubmissionRow({ sub, page, pageSize }) {
+  const [live, setLive] = useState(null);
+  const isActive = sub.status === 'C' || sub.status === 'P';
+
+  useEffect(() => {
+    if (!isActive) return;
+    const evtSource = new EventSource(`/api/submission/${sub.id}/stream`);
+    evtSource.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      setLive(data);
+      if (data.status === 'D') evtSource.close();
+    };
+    evtSource.onerror = () => evtSource.close();
+    return () => evtSource.close();
+  }, [sub.id, isActive]);
+
+  const score = live?.score ?? sub.score ?? 0;
+  const max_score = live?.max_score ?? sub.max_score ?? 0;
+  const status = live?.status ?? sub.status;
+  const time_used = live?.time_used ?? sub.time_used;
+  const memory_used = live?.memory_used ?? sub.memory_used;
+
+  return (
+    <div className="is-flex is-align-items-center border-bottom py-2 px-3"
+      style={{ borderBottom: '1px solid #f0f0f0', minHeight: '70px' }}>
+      <div className={`has-text-centered p-2 mr-3 is-flex is-flex-direction-column is-justify-content-center ${getStatusBgClass(score, status)}`}
+        style={{ width: '100px', minWidth: '100px', borderRadius: '6px', height: '56px' }}>
+        <span className="is-size-6 has-text-weight-bold" style={{ lineHeight: '1.1' }}>
+          {score !== null ? `${score} / ${max_score}` : '---'}
+        </span>
+        <span className="is-size-7 mt-1 opacity-80" style={{ fontSize: '0.75rem' }}>
+          {STATUS_LABEL[status] || status} | {sub.language || 'C++'}
+        </span>
+      </div>
+      <div className="is-flex-grow-1" style={{ overflow: 'hidden' }}>
+        <div className="is-flex is-align-items-center">
+          <a href={`/problem/${sub.problem?.id}`} className="has-text-link has-text-weight-bold is-size-6 mr-2 truncate">
+            {sub.problem?.name || `Bài tập #${sub.problem?.id || sub.id}`}
+          </a>
+        </div>
+        <div className="is-size-7 has-text-grey mt-1 is-flex is-align-items-center is-flex-wrap-wrap">
+          <strong className="has-text-info mr-1">
+            {sub.user?.username || sub.username || 'Anonymous'}
+          </strong>
+          {sub.contest?.name && (
+            <span className="tag is-warning is-light is-small mr-2 py-0 px-1">
+              [{sub.contest.name}]
+            </span>
+          )}
+          <span>&bull; {formatDate(sub.date_created)}</span>
+        </div>
+      </div>
+      <div className="is-hidden-mobile mr-4 is-size-7">
+        <span className="has-text-grey-light">
+          <a href={`/submission/${sub.id}`} className="has-text-link">view</a> &bull;
+          <a href={`/submission/${sub.id}/source`} className="has-text-link">source</a>
+        </span>
+      </div>
+      <div className="has-text-right" style={{ minWidth: '90px' }}>
+        <div className="is-size-7 has-text-weight-semibold">
+          {time_used ? `${(time_used / 1000).toFixed(2)}s` : '---'}
+        </div>
+        <div className="is-size-7 has-text-grey">
+          {memory_used ? `${(memory_used / 1024).toFixed(2)} MB` : '---'}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function SubmissionList({
+  isOpen, onClose, title,
+  problem_id: propProblemId, contest_id: propContestId,
+  username: propUsername, is_best: propIsBest,
+}) {
   const [page, setPage] = useState(1);
-  const [isBest, setIsBest] = useState(false);
-  const { problem_id, contest_id } = useParams();
+  const [isBest, setIsBest] = useState(propIsBest ?? false);
+  const { problem_id: paramProblemId, contest_id: paramContestId } = useParams();
   const { current_user } = useAuth();
 
-  const username = current_user?.username;
+  const problem_id = propProblemId || paramProblemId;
+  const contest_id = propContestId || paramContestId;
+  const username = propUsername || current_user?.username;
 
   const { data, isLoading } = useQuery({
     queryKey: ['submissions', { isBest, problem_id, contest_id, username, page }],
     queryFn: () => fetchSubmissions({ is_best: isBest, problem_id, contest_id, username, page }),
-    staleTime: 1000 * 10,
+    staleTime: isOpen ? 1000 * 2 : 1000 * 10,
+    enabled: isOpen !== undefined ? (isOpen && !!problem_id) : true,
     placeholderData: (prev) => prev,
   });
 
   const list = data?.items || [];
   const totalPages = data?.pages || 1;
+  const pageSize = data?.size || 50;
+
+  useEffect(() => { if (isOpen) setPage(1); }, [isOpen]);
 
   const handleToggleBest = (value) => {
     setIsBest(value);
     setPage(1);
   };
 
+  const content = (
+    <>
+      <div className="level mb-4 is-mobile">
+        <div className="level-left">
+          <div className="buttons has-addons">
+            <button className={`button is-small ${!isBest ? 'is-link is-selected' : ''}`}
+              onClick={() => handleToggleBest(false)}>Tất cả bài nộp</button>
+            <button className={`button is-small ${isBest ? 'is-link is-selected' : ''}`}
+              onClick={() => handleToggleBest(true)}>Bài nộp tốt nhất</button>
+          </div>
+        </div>
+        <div className="level-right">
+          {totalPages > 1 && (
+            <nav className="pagination is-small" role="navigation">
+              <button className="pagination-previous button is-small"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}>&laquo;</button>
+              <button className="pagination-next button is-small"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}>&raquo;</button>
+            </nav>
+          )}
+        </div>
+      </div>
+
+      <div className="box p-0" style={{ overflow: 'hidden' }}>
+        {isLoading ? (
+          <div className="has-text-centered py-6">
+            <span className="icon is-large"><i className="fas fa-spinner fa-pulse"></i></span>
+            <p className="has-text-grey mt-2">Đang tải bài nộp...</p>
+          </div>
+        ) : list.length === 0 ? (
+          <div className="has-text-centered has-text-grey py-6">Không có bài nộp nào.</div>
+        ) : (
+          <div className="submission-list">
+            {list.map((sub, index) => (
+              <SubmissionRow key={sub.id} sub={sub} page={page} pageSize={pageSize} />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+
+  if (isOpen !== undefined) {
+    return (
+      <div className={`modal ${isOpen ? 'is-active' : ''}`}>
+        <div className="modal-background" onClick={onClose}></div>
+        <div className="modal-content" style={{ width: '85%', maxWidth: '1000px' }}>
+          <div className="box">
+            <div className="is-flex is-justify-content-space-between is-align-items-center mb-4">
+              <h2 className="title is-4 mb-0">{title}</h2>
+              {data?.total > 0 && <span className="tag is-info is-light">Tổng cộng: {data.total} bài nộp</span>}
+            </div>
+            {content}
+          </div>
+        </div>
+        <button className="modal-close is-large" aria-label="close" onClick={onClose}></button>
+      </div>
+    );
+  }
+
   return (
     <div className="section p-4">
       <div className="container">
-        
-        {/* Thanh công cụ phía trên: Toggle isBest & Pagination */}
-        <div className="level mb-4 is-mobile">
-          <div className="level-left">
-            <div className="buttons has-addons">
-              <button
-                className={`button is-small ${!isBest ? 'is-link is-selected' : ''}`}
-                onClick={() => handleToggleBest(false)}
-              >
-                Tất cả bài nộp
-              </button>
-              <button
-                className={`button is-small ${isBest ? 'is-link is-selected' : ''}`}
-                onClick={() => handleToggleBest(true)}
-              >
-                Bài nộp tốt nhất
-              </button>
-            </div>
-          </div>
-
-          {/* Pagination gắn luôn lên header cho tiện thao tác */}
-          <div className="level-right">
-            {totalPages > 1 && (
-              <nav className="pagination is-small" role="navigation">
-                <button
-                  className="pagination-previous button is-small"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                >
-                  &laquo;
-                </button>
-                <button
-                  className="pagination-next button is-small"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages}
-                >
-                  &raquo;
-                </button>
-                <ul className="pagination-list">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                    .map((p, i, arr) => {
-                      const prev = arr[i - 1];
-                      return (
-                        <React.Fragment key={p}>
-                          {prev && p - prev > 1 && (
-                            <li><span className="pagination-ellipsis">&hellip;</span></li>
-                          )}
-                          <li>
-                            <button
-                              className={`pagination-link button is-small ${page === p ? 'is-link' : ''}`}
-                              onClick={() => setPage(p)}
-                            >
-                              {p}
-                            </button>
-                          </li>
-                        </React.Fragment>
-                      );
-                    })}
-                </ul>
-              </nav>
-            )}
-          </div>
-        </div>
-
-        {/* Danh sách bài nộp kiểu Row Custom */}
-        <div className="box p-0" style={{ overflow: 'hidden' }}>
-          {isLoading ? (
-            <div className="has-text-centered py-6">
-              <span className="icon is-large">
-                <i className="fas fa-spinner fa-pulse"></i>
-              </span>
-              <p className="has-text-grey mt-2">Đang tải bài nộp...</p>
-            </div>
-          ) : list.length === 0 ? (
-            <div className="has-text-centered has-text-grey py-6">Không có bài nộp nào.</div>
-          ) : (
-            <div className="submission-list">
-              {list.map((sub) => (
-                <div
-                  key={sub.id}
-                  className="is-flex is-align-items-center border-bottom py-2 px-3"
-                  style={{
-                    borderBottom: '1px solid #f0f0f0',
-                    minHeight: '70px',
-                  }}
-                >
-                  {/* 1. Khối Status / Điểm / Ngôn ngữ (Bên trái) */}
-                  <div
-                    className={`has-text-centered p-2 mr-3 is-flex is-flex-direction-column is-justify-content-center ${getStatusBgClass(
-                      sub.percentage,
-                      sub.status
-                    )}`}
-                    style={{
-                      width: '100px',
-                      minWidth: '100px',
-                      borderRadius: '6px',
-                      height: '56px',
-                    }}
-                  >
-                    <span className="is-size-6 has-text-weight-bold" style={{ lineHeight: '1.1' }}>
-                      {sub.percentage !== undefined && sub.percentage !== null ? `${sub.percentage} / 100` : '---'}
-                    </span>
-                    <span className="is-size-7 mt-1 opacity-80" style={{ fontSize: '0.75rem' }}>
-                      {sub.status || 'N/A'} | {sub.language || 'C++'}
-                    </span>
-                  </div>
-
-                  {/* 2. Thông tin Tên Bài / User / Thời gian (Bên giữa) */}
-                  <div className="is-flex-grow-1" style={{ overflow: 'hidden' }}>
-                    <div className="is-flex is-align-items-center">
-                      <a href={`/problem/${sub.problem?.id}`} className="has-text-link has-text-weight-bold is-size-6 mr-2 truncate">
-                        {sub.problem?.name || `Bài tập #${sub.problem?.id || sub.id}`}
-                      </a>
-                    </div>
-                    <div className="is-size-7 has-text-grey mt-1 is-flex is-align-items-center is-flex-wrap-wrap">
-                      <strong className="has-text-info mr-1">
-                        {sub.user?.username || sub.username || 'Anonymous'}
-                      </strong>
-                      {sub.contest?.name && (
-                        <span className="tag is-warning is-light is-small mr-2 py-0 px-1">
-                          [{sub.contest.name}]
-                        </span>
-                      )}
-                      <span>&bull; {formatDate(sub.date_created)}</span>
-                    </div>
-                  </div>
-
-                  {/* 3. Link thao tác (Xem code, diff...) */}
-                  <div className="is-hidden-mobile mr-4 is-size-7">
-                    <span className="has-text-grey-light">
-                      <a href={`/submission/${sub.id}`} className="has-text-link">view</a> &bull;{' '}
-                      <a href={`/submission/${sub.id}/source`} className="has-text-link">source</a> &bull;{' '}
-                      <a href={`/submission/${sub.id}/rejudge`} className="has-text-grey">rejudge</a>
-                    </span>
-                  </div>
-
-                  {/* 4. Thời gian chạy & Bộ nhớ (Bên phải) */}
-                  <div className="has-text-right" style={{ minWidth: '90px' }}>
-                    <div className="is-size-7 has-text-weight-semibold">
-                      {sub.time_used ? `${(sub.time_used / 1000).toFixed(2)}s` : '---'}
-                    </div>
-                    <div className="is-size-7 has-text-grey">
-                      {sub.memory_used ? `${(sub.memory_used / 1024).toFixed(2)} MB` : '---'}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Thêm chút CSS trực tiếp nếu cần */}
+        {content}
         <style>{`
-          .truncate {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
-          .border-bottom:last-child {
-            border-bottom: none !important;
-          }
-          .opacity-80 {
-            opacity: 0.85;
-          }
+          .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .border-bottom:last-child { border-bottom: none !important; }
+          .opacity-80 { opacity: 0.85; }
         `}</style>
       </div>
     </div>

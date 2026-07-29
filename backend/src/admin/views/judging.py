@@ -13,7 +13,7 @@ from ..config import redis_client
 @register(Submission, sqlalchemy_sessionmaker=async_session_maker)
 class SubmissionAdmin(SqlAlchemyModelAdmin):
     menu_section = "Judging"
-    list_display = ("id", "date_created", "status", "percentage", "language", "user_id", "problem_id", "contest_id")
+    list_display = ("id", "date_created", "status", "score", "language", "user_id", "problem_id", "contest_id")
     list_display_links = ("id",)
     list_filter = ("status", "language", "judger_name")
     search_fields = ("source", "error")

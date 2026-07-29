@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 
 class SUBMISSION_STATUS(str, Enum):
     QUEUED = "QW"
+    COMPILING = "C"
     PROCESSING = "P"
-    GRADING = "G"
     DONE = "D"
 
 
@@ -36,7 +36,8 @@ class SUBMISSION_VERDICT(str, Enum):
 class SubmissionPublic(SQLModel):
     id: Optional[int] = Field(primary_key=True)
     status: str = Field(default=SUBMISSION_STATUS.QUEUED, index=True)
-    percentage: Optional[float] = Field()
+    score: Optional[float] = Field(default=0.0)
+    max_score: Optional[float] = Field(default=0.0)
     time_used: Optional[float] = Field()
     memory_used: Optional[float] = Field()
     date_created: datetime = Field(default_factory=datetime.now, index=True)

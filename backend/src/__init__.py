@@ -1,5 +1,7 @@
+import asyncio
 from dotenv import load_dotenv
 load_dotenv()
+import json
 import os
 from contextlib import asynccontextmanager
 
@@ -12,7 +14,48 @@ from sqlalchemy import select
 from starlette.middleware.sessions import SessionMiddleware
 
 from .database import async_session_maker, init_db
-from .models import Problem
+from .models import ContestRegistration, Problem, Submission
+
+
+async def consume_results(redis):
+    """Background task: pop finished results from Redis list and persist to DB."""
+    while True:
+        try:
+            result = await redis.brpop("results", timeout=1)
+            if not result:
+                continue
+            _, payload = result
+            data = json.loads(payload)
+            submission_id = data["submission_id"]
+            async with async_session_maker() as session:
+                sub = await session.get(Submission, submission_id)
+                if sub:
+                    sub.status = data.get("status", sub.status)
+                    sub.score = data.get("score", sub.score)
+                    sub.max_score = data.get("max_score", sub.max_score)
+                    sub.time_used = data.get("time_used", sub.time_used)
+                    sub.memory_used = data.get("memory_used", sub.memory_used)
+                    sub.results = data.get("results", sub.results)
+                    sub.error = data.get("error")
+                    sub.judger_name = data.get("judger_name", sub.judger_name)
+                    sub.judged_date = __import__("datetime").datetime.now()
+                    session.add(sub)
+
+                    if sub.contest_id:
+                        stmt = select(ContestRegistration).where(
+                            ContestRegistration.contest_id == sub.contest_id,
+                            ContestRegistration.user_id == sub.user_id,
+                        )
+                        reg = (await session.scalars(stmt)).first()
+                        if reg and data.get("score", 0) > reg.total_score:
+                            reg.total_score = data["score"]
+                            session.add(reg)
+
+                    await session.commit()
+                await redis.delete(f"live:{submission_id}")
+        except Exception as e:
+            print(f"Consumer error: {e}")
+            await asyncio.sleep(1)
 
 
 @asynccontextmanager
@@ -21,7 +64,9 @@ async def lifespan(app: FastAPI):
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
     app.state.redis = aioredis.from_url(redis_url, decode_responses=True)
     print("Redis connected!")
+    consumer = asyncio.create_task(consume_results(app.state.redis))
     yield
+    consumer.cancel()
     await app.state.redis.close()
     print("Redis closed!")
 

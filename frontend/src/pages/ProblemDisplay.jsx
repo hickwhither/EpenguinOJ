@@ -6,7 +6,7 @@ import { get_request } from '../Request';
 import { useAuth } from '../context/AuthContext';
 import { HandleDisplay } from '../components/HandleDisplay';
 import SubmitModal from '../components/problem/SubmitModal';
-import SubmissionList from '../components/problem/SubmissionList';
+import SubmissionList from './SubmissionList';
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";

@@ -1,9 +1,11 @@
+import asyncio
 import json
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import apaginate
 from pydantic import BaseModel
 from sqlmodel import or_, select
+from starlette.responses import StreamingResponse
 
 from src.database import SessionDep
 from src.dependencies.contest import (
@@ -18,6 +20,7 @@ from src.models import (
     ProblemPublic,
     ProblemView,
     Submission,
+    SUBMISSION_STATUS,
     SubmissionPublic,
     SubmissionView,
     User,
@@ -154,7 +157,7 @@ async def get_list_submission(
 
     if is_best:
         query = query.order_by(
-            Submission.percentage.desc(),
+            Submission.score.desc(),
             Submission.time_used.asc(),
             Submission.memory_used.asc(),
             Submission.id.desc(),
@@ -167,6 +170,7 @@ async def get_list_submission(
 
 @router.get("/submission/{id}", response_model=SubmissionView)
 async def get_submission(
+    request: Request,
     session: SessionDep,
     id: int,
     current_user: User = Depends(verify_auth),
@@ -176,5 +180,48 @@ async def get_submission(
         raise HTTPException(404, "submission.notfound")
     if current_user.id != submission.user_id:
         raise HTTPException(403, "submission.forbidden")
+
+    live = await request.app.state.redis.get(f"live:{id}")
+    if live:
+        data = json.loads(live)
+        if data.get("status") != SUBMISSION_STATUS.DONE:
+            submission.status = data.get("status", submission.status)
+            submission.score = data.get("score", submission.score)
+            submission.max_score = data.get("max_score", submission.max_score)
+            submission.time_used = data.get("time_used", submission.time_used)
+            submission.memory_used = data.get("memory_used", submission.memory_used)
+
     return submission
+
+
+@router.get("/submission/{id}/stream")
+async def stream_submission(
+    request: Request,
+    session: SessionDep,
+    id: int,
+    current_user: User = Depends(verify_auth),
+):
+    submission = await session.get(Submission, id)
+    if not submission:
+        raise HTTPException(404, "submission.notfound")
+    if current_user.id != submission.user_id:
+        raise HTTPException(403, "submission.forbidden")
+
+    async def event_generator():
+        last_data = None
+        while True:
+            live = await request.app.state.redis.get(f"live:{id}")
+            if live:
+                data = json.loads(live)
+                if data != last_data:
+                    last_data = data
+                    yield f"data: {json.dumps(data)}\n\n"
+                    if data.get("status") == SUBMISSION_STATUS.DONE:
+                        break
+            else:
+                if last_data is None:
+                    yield f"data: {json.dumps({'status': submission.status, 'score': submission.score, 'max_score': submission.max_score})}\n\n"
+            await asyncio.sleep(1)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 

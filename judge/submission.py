@@ -125,8 +125,8 @@ class Submission:
         else:
             self.is_compiled = False
             self.compile_error = proc.stdout or meta.get("status", "Compilation Failed")
-            
-        self.cleanup()
+
+        subprocess.run(self._base_cmd() + ["--cleanup"], capture_output=True, check=False)
 
     def run(
         self,
