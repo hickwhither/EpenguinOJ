@@ -26,9 +26,9 @@ class VerifyCreateRequest(BaseModel):
 
 # -- ROUTERS --
 @router.get("/user")
-def is_user_exists(session: SessionDep, discord_id:str):
-    user = session.exec(select(User).where(User.discord_id == discord_id)).first()
-    return True if user else False
+async def is_user_exists(session: SessionDep, discord_id: str):
+    user = (await session.exec(select(User).where(User.discord_id == discord_id))).first()
+    return user is not None
 
 @router.post("/create")
 def create_verify(data: VerifyCreateRequest):

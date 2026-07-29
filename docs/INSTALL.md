@@ -38,23 +38,22 @@ DROP DATABASE IF EXISTS hwoj; -- Delete databases
 ```
 
 ## Setting up backend
-Install python libraries using 'uv':
 ```sh
 $ cd backend
 $ uv sync
+$ cp example.env .env        # Edit .env with your database credentials and secret key
 ```
 
 Run test
 ```sh
-$ uv run fastapi dev --port 8000 # For devlopment only
+$ uv run fastapi dev --port 8000 # For development only
 ```
 
 ## Setting up frontend
-Install nodejs packages
 ```sh
-$ cd HWOJ-frontend
+$ cd frontend
 $ npm i
-$ npm run build # build
+$ npm run build
 ```
 
 Run test
@@ -62,7 +61,39 @@ Run test
 $ npm run dev   # Development mode
 ```
 
+## Setting up judge
+```sh
+$ cd judge
+$ uv sync
+$ cp example.env .env        # Edit .env with your Redis URL
+```
+See [JUDGE.md](JUDGE.md) for detailed judge setup including isolate sandbox and Docker.
+
 ## Setting up supervisord
+
+Install supervisor:
+```sh
+$ apt install supervisor
+```
+
+Copy configs and fix paths:
+```sh
+$ cp configs/hwoj-backend.conf /etc/supervisor/conf.d/
+$ cp configs/hwoj-judge.conf /etc/supervisor/conf.d/
+# Edit /etc/supervisor/conf.d/*.conf — replace /home/oj/HWOJ with your deploy path
+```
+
+Make sure each service has its `.env` file in place, then start:
+```sh
+$ supervisorctl reread
+$ supervisorctl update
+$ supervisorctl start all
+```
+
+Check status:
+```sh
+$ supervisorctl status
+```
 
 ## Setting up nginx
 > **Nginx Setup:** Copy `/configs/nginx.conf`, change the <dist_folder> to your frontend `dist` folder, and configure `proxy_pass` to point to your FastAPI server (`http://127.0.0.1:8000`).

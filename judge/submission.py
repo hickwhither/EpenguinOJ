@@ -141,7 +141,8 @@ class Submission:
         if self.language == "text":
             with open(os.path.join(self.work_dir, "output"), "w", encoding="utf-8") as f:
                 f.write(self.source_code)
-            
+            return {"status": "OK", "time_used": 0.0, "memory_used": 0.0}
+        
         self._init_box()
         work_input_path = os.path.join(self.work_dir, "input")
         if os.path.exists(work_input_path):

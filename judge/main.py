@@ -1,6 +1,5 @@
-import os, argparse, json
-from redis import asyncio
-from redis.asyncio import aioredis
+import os, argparse, json, asyncio
+from redis.asyncio import Redis
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -17,7 +16,7 @@ BOX_ID = args.box_id
 from standard import process_submission
 
 async def start_worker():
-    redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
+    redis_client = Redis.from_url(REDIS_URL, decode_responses=True)
     print(f"{JUDGER_NAME} connected and ready!")
 
     try:

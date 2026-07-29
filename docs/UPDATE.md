@@ -27,7 +27,7 @@ $ uv run alembic revision --autogenerate -m "<message>"
 ```sh
 $ cd frontend
 $ npm i # install any missing packages
-$ npm run buid # and rebuild
+$ npm run build # and rebuild
 ```
 
 ## Update discordbot
