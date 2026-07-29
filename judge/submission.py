@@ -4,7 +4,6 @@ import subprocess
 
 
 # Language Executor
-
 class PythonExecutor:
     language_id = "python"
     file_extension = "py"
@@ -22,11 +21,13 @@ class CPPExecutor:
     command = "/usr/bin/g++ -std=c++14 -Wall -DONLINE_JUDGE -O2 -lm -fmax-errors=5 -march=native -s {source} -o {prog}"
     executable = ""
 
+
 class TextExecutor:
     language_id = "text"
     file_extension = "txt"
     compiled_file_extension = "txt"
     version = "cat --version"
+    command = ""
     executable = "/usr/bin/cat"
 
 
@@ -56,18 +57,19 @@ class Submission:
         self.compile_time_limit = compile_time_limit
         self.compile_memory_limit = compile_memory_limit
         self.work_dir = f"tmp/{self.submission_id}"
-
-
-        if self.language == "txt":
-            self.is_compiled = True
-            return
-
+        
         self.box_dir: str | None = None
+        self.meta_path: str | None = None
         self.is_compiled: bool = False
         self.compile_error: str = ""
 
         shutil.rmtree(self.work_dir, ignore_errors=True)
         os.makedirs(self.work_dir, exist_ok=True)
+        
+        if self.language == "text":
+            self.is_compiled = True
+            return
+
         self._compile()
 
     def _base_cmd(self) -> list[str]:
@@ -77,10 +79,13 @@ class Submission:
         cmd = self._base_cmd() + ["--init"]
         output = subprocess.check_output(cmd, text=True).strip()
         self.box_dir = os.path.join(output, "box")
-        self.meta_path = os.path.join(self.work_dir, f"meta.txt")
+        self.meta_path = os.path.join(self.work_dir, "meta.txt")
 
     def _get_meta(self) -> dict[str, str]:
         meta: dict[str, str] = {}
+        if not os.path.exists(self.meta_path):
+            return meta
+            
         with open(self.meta_path, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
                 if ":" in line:
@@ -99,7 +104,6 @@ class Submission:
 
         raw_cmd = self.executor.command.format(source=src_filename, prog=out_filename)
         compile_args = raw_cmd.split()
-
         isolate_cmd = self._base_cmd() + [
             f"--meta={self.meta_path}",
             f"--time={self.compile_time_limit}",
@@ -111,7 +115,6 @@ class Submission:
 
         proc = subprocess.run(isolate_cmd, capture_output=True, text=True)
         meta = self._get_meta()
-
         out_path = os.path.join(self.box_dir, out_filename)
 
         if proc.returncode == 0 and os.path.exists(out_path):
@@ -122,39 +125,60 @@ class Submission:
         else:
             self.is_compiled = False
             self.compile_error = proc.stdout or meta.get("status", "Compilation Failed")
+            
+        self.cleanup()
 
     def run(
         self,
-        input: str = None,
-        output: str = None,
-        time_limit: float = 1.0,    # Giây
+        input_file_name: str = None,
+        output_file_name: str = None,
+        time_limit: float = 1.0,    # Seconds
         memory_limit: int = 32768,  # KB
     ) -> dict:
-        if not self.is_compiled: return
+        if not self.is_compiled:
+            return {"status": "CE", "error": self.compile_error}
+        
+        if self.language == "text":
+            with open(os.path.join(self.work_dir, "output"), "w", encoding="utf-8") as f:
+                f.write(self.source_code)
+            
         self._init_box()
-        if input:
-            shutil.copy2(os.path.join(self.work_dir, "input"), os.path.join(self.box_dir, input))
-        else:
-            shutil.copy2(os.path.join(self.work_dir, "input"), os.path.join(self.box_dir, "input.in"))
+        work_input_path = os.path.join(self.work_dir, "input")
+        if os.path.exists(work_input_path):
+            box_input_name = input_file_name if input_file_name else "input.in"
+            shutil.copy2(work_input_path, os.path.join(self.box_dir, box_input_name))
         shutil.copy2(self.executable_path, self.box_dir)
 
-        exec_args = [self.executor.executable] if self.executor.executable else [] + [self.executable_name]
-
+        exec_args = ([self.executor.executable] if self.executor.executable else []) + [self.executable_name]
         cmd = self._base_cmd() + [
             f"--meta={self.meta_path}",
             f"--time={time_limit}",
             f"--wall-time={time_limit + 2.0}",
             f"--mem={memory_limit}",
+            "--stderr=error.err"
         ]
-        if not input: cmd.append("--stdin=input.in")
-        if not output: cmd.append("--stdin=output.in")
-        cmd = cmd + ["--stderr=error.err", "--run", "--"] + exec_args
+
+        # I/O Standard or Files check
+        if not input_file_name:
+            cmd.append("--stdin=input.in")
+        if not output_file_name: 
+            cmd.append("--stdout=output.out")
+            
+        cmd = cmd + ["--run", "--"] + exec_args
 
         proc = subprocess.run(cmd, capture_output=True, text=True)
         meta = self._get_meta()
-        
-        shutil.copy2(os.path.join(self.box_dir, "output.out"), os.path.join(self.work_dir, "output"))
-        shutil.copy2(os.path.join(self.box_dir, "error.err"), os.path.join(self.work_dir, "error"))
+
+        expected_out = output_file_name if output_file_name else "output.out"
+        try:
+            shutil.copy2(os.path.join(self.box_dir, expected_out), os.path.join(self.work_dir, "output"))
+        except FileNotFoundError:
+            pass # Thí sinh không tạo file output hoặc code bị lỗi trước khi ghi file
+            
+        try:
+            shutil.copy2(os.path.join(self.box_dir, "error.err"), os.path.join(self.work_dir, "error"))
+        except FileNotFoundError:
+            pass
 
         status = meta.get("status", "OK")
         if status == "TO":
@@ -177,6 +201,7 @@ class Submission:
         }
 
     def cleanup(self) -> None:
+        shutil.rmtree(self.work_dir, ignore_errors=True)
         subprocess.run(
             self._base_cmd() + ["--cleanup"],
             capture_output=True,

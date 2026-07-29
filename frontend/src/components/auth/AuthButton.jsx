@@ -1,5 +1,5 @@
 import { useAuth } from '../../context/AuthContext';
-import { defaultAvatar } from '../HandleDisplay';
+const defaultAvatar = "https://bulma.io/assets/images/placeholders/128x128.png";
 
 export default function AuthButton() {
     const { current_user, loading, logout, setIsLoginModalActive: setIsLoginModalActive } = useAuth();

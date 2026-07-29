@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { post_request } from '../Request';
 import { toast } from 'react-toastify';
@@ -25,15 +25,21 @@ export default function DiscordConfirm() {
     password: '',
   });
 
-  useEffect(() => {
-    if (!action || !secret) {
-      toast.error("Confirmation link is missing required parameters.");
-      navigate('/', { replace: true });
-      return;
-    }
 
-    validateTokenAndProceed();
-  }, [action, secret]);
+  const handleQuickLogin = async () => {
+    setLoading(true);
+    setError(null);
+    const res = await post_request('/confirm/quick-login', { secret });
+    if (res && res.status >= 200 && res.status < 300) {
+      toast.success("Login successful!");
+      navigate('/', { replace: true });
+    } else {
+      toast.error(res?.data?.detail || "Quick login failed.");
+      navigate('/', { replace: true });
+    }
+    setLoading(false);
+  };
+
 
   const validateTokenAndProceed = async () => {
     setIsCheckingToken(true);
@@ -50,19 +56,14 @@ export default function DiscordConfirm() {
     }
   };
 
-  const handleQuickLogin = async () => {
-    setLoading(true);
-    setError(null);
-    const res = await post_request('/confirm/quick-login', { secret });
-    if (res && res.status >= 200 && res.status < 300) {
-      toast.success("Login successful!");
-      navigate('/', { replace: true });
-    } else {
-      toast.error(res?.data?.detail || "Quick login failed.");
-      navigate('/', { replace: true });
-    }
-    setLoading(false);
-  };
+
+  if (!action || !secret) {
+    toast.error("Confirmation link is missing required parameters.");
+    navigate('/', { replace: true });
+    return;
+  }
+  validateTokenAndProceed();
+
 
   // Validate phía Client trước khi gửi Request
   const validateForm = () => {

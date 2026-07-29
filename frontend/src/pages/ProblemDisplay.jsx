@@ -57,7 +57,7 @@ export default function ProblemDisplay() {
   if (error) {
     return (
       <div className="notification is-danger is-light">
-        {error.response?.data?.detail || error.message || t("Cannot load problem")}
+        {error.response?.data?.detail || error.message || "Cannot load problem"}
       </div>
     );
   }
@@ -108,7 +108,7 @@ export default function ProblemDisplay() {
           
           {p.authors && p.authors.length > 0 && (
             <div>
-              <strong>{p.authors.length > 1 ? t('Authors') : t('Author')}: </strong>
+              <strong>{p.authors.length > 1 ? 'Authors' : 'Author'}: </strong>
               {p.authors.map((a, index) => (
                 <React.Fragment key={a.id || index}>
                   {HandleDisplay(a)}

@@ -1,8 +1,6 @@
 import React from 'react';
 
-const defaultAvatar = "https://bulma.io/assets/images/placeholders/128x128.png";
-
-const HandleDisplay = ({ user }) => {
+export const HandleDisplay = ({ user }) => {
   const getRankTagClass = (rank) => {
     // if (!rank) return '';
     switch (rank.toLowerCase()) {
@@ -28,5 +26,3 @@ const HandleDisplay = ({ user }) => {
     </span>
   );
 };
-
-export {defaultAvatar, HandleDisplay}

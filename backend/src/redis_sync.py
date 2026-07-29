@@ -83,22 +83,3 @@ async def sync_problem_to_redis(redis_client, problem_id: int):
 
         await redis_client.set(f"problem:{problem.id}", json.dumps(problem_payload))
 
-
-
-async def sync_all(redis_client):
-    keys_to_delete = []
-    for pattern in ("problem:*", "subtask:*", "hack:*", "submission:*"):
-        async for key in redis_client.scan_iter(match=pattern):
-            keys_to_delete.append(key)
-
-    if keys_to_delete:
-        await redis_client.delete(*keys_to_delete)
-        print(f"🧹 Đã xóa {len(keys_to_delete)} key cũ khỏi Redis.")
-
-    async with async_session_maker() as session:
-        problem_ids = (await session.scalars(select(Problem.id))).all()
-
-    for p_id in problem_ids:
-        await sync_problem_to_redis(redis_client, p_id)
-
-    return len(problem_ids)

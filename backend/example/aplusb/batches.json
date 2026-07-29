@@ -1,0 +1,14 @@
+{
+    "1": {
+        "points": 1,
+        "generator": "small",
+        "validator": "smallValid",
+        "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    },
+    "2": {
+        "points": 1,
+        "generator": "big",
+        "validator": "bigValid",
+        "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    }
+}

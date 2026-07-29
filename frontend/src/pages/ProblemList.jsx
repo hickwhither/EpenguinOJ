@@ -45,7 +45,7 @@ export default function ProblemList() {
   const debouncedSearch = useDebounce(search, 500);
 
   // React Query state management with debounced search value
-  const { data, isLoading, isPlaceholderData } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['problems', { page, search: debouncedSearch, contest_id }],
     queryFn: () => fetchProblems({ page, search: debouncedSearch, contest_id }),
     staleTime: 1000 * 60,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, useOutletContext } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -14,7 +14,6 @@ function preprocessMath(text) {
 }
 
 export default function ContestInfo() {
-  const { contest_id } = useParams();
   const { contest } = useOutletContext();
   const rawDescription = contest?.description || 'No description';
   const processedDescription = preprocessMath(rawDescription);

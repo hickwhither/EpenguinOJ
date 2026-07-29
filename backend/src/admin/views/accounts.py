@@ -15,7 +15,7 @@ class UserAdmin(SqlAlchemyModelAdmin):
     readonly_fields = ("id", "date_joined", "last_login")
     formfield_overrides = {
         "password": (WidgetType.PasswordInput, {"passwordModalForm": True}),
-        "bio": (WidgetType.TextArea, {"rows": 4}),
+        "bio": (WidgetType.TextArea),
     }
 
     async def authenticate(self, username: str, password: str) -> int | None:

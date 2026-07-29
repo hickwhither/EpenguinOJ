@@ -177,3 +177,4 @@ async def get_submission(
     if current_user.id != submission.user_id:
         raise HTTPException(403, "submission.forbidden")
     return submission
+

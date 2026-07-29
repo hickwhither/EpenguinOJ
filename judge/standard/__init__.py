@@ -1,8 +1,8 @@
 import os
 import subprocess
 from pathlib import Path
-from isolate_runner import isolate_run
 from checkers import token
+from submission import Submission
 
 
 def _safe_read(path: str) -> str:
@@ -80,3 +80,21 @@ def judge(executable, exec_path, problem, box_id=0, work_dir: str | None = None)
         'percentage': percentage,
         'test_cases': test_cases_results
     }
+
+
+
+async def process_submission(payload: dict, box_id=0):
+    """Hàm xử lý submission (Ví dụ: chấm bài, chấm code, etc.)"""
+    submission_id = payload.get("submission_id")
+    problem_id = payload.get("problem_id")
+    language = payload.get("language")
+    source = payload.get("source")
+    
+    print(f"🚀 Submission#{submission_id} Language:{language} Problem({problem_id})")
+
+    user = Submission(submission_id, language, source, box_id)
+    
+    user.cleanup()
+
+    print(f"✅ Submission #{submission_id}")
+

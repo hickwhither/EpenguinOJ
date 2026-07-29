@@ -13,7 +13,6 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .database import async_session_maker, init_db
 from .models import Problem
-from .redis_sync import sync_all
 
 
 @asynccontextmanager
@@ -22,16 +21,7 @@ async def lifespan(app: FastAPI):
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
     app.state.redis = aioredis.from_url(redis_url, decode_responses=True)
     print("Redis connected!")
-
-    try:
-        count = await sync_all(app.state.redis)
-        print(f"✅ Synced {count} problems to Redis!")
-
-    except Exception as e:
-        print(f"❌ Error when syncing problems to Redis: {e}")
-
     yield
-
     await app.state.redis.close()
     print("Redis closed!")
 

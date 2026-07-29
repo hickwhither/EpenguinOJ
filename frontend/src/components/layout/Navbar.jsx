@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { APP_NAME } from '../../Config'
+import { APP_NAME } from '../../config'
 import AuthButton from '../auth/AuthButton'
 
 export default function Navbar() {

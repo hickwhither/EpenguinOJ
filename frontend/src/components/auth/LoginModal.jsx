@@ -54,7 +54,7 @@ export default function LoginModal() {
                 setErrors((prev) => ({ ...prev, general: 'Username or password incorrect' }));
             }
         } catch (err) {
-            setErrors((prev) => ({ ...prev, general: 'An error occurred. Please try again' }));
+            setErrors((prev) => ({ ...prev, general: `An error occurred. Please try again ${err}` }));
         } finally {
             setIsLoading(false);
         }

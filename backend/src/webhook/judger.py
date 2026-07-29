@@ -1,87 +1,25 @@
-from datetime import datetime
-from typing import Any
-from fastapi import APIRouter, Request, HTTPException, Header, Depends
-from pydantic import BaseModel
-from sqlmodel import select
-import os
-
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from src.database import SessionDep
-from src.models.submission import Submission, SUBMISSION_STATUS
-from src.models.problem import Problem, ProblemPublic
+from src.models import Problem
+from pathlib import Path
 
 # CONFIGURATIONS
 router = APIRouter(prefix="/judger", tags=["webhook.judger"])
 
+BASE_PROBLEMS_DIR = Path("tmp/problems").resolve()
 
-# SHEMAS
-class SubmissionUpdateResult(BaseModel):
-    id: int
-    status: str
-    time_used: float | None = None
-    memory_used: float | None = None
-    error: str | None = None
-    test_cases: list[dict[str, Any]] | None = None
+@router.get('/{id}')
+@router.get('/{id}/{path:path}')
+async def serve_file(session: SessionDep, id: int, path: str | None = None):
+    if not path:
+        problem = await session.get(Problem, id)
+        if not problem:
+            raise HTTPException(status_code=404, detail="Problem not found")
+        return problem.batches
 
-
-class SubmissionJudge(BaseModel):
-    id: int
-    language: str
-    source: str
-    problem: ProblemPublic
-
-
-# -- DEPENDENCIES / FUNCTIONS --
-active_judgers = {}
-
-def judge_active(
-    request: Request,
-    session: SessionDep,
-    name: str = Header(..., description="Your name"),
-    message: str | None = Header(None, description="whatever you say bro")
-) -> str:
-    active_judgers[name] = {
-        "message": message,
-        "last_seen": datetime.now()
-    }
-    return name
-
-
-ActiveJudge = Depends(judge_active)
-
-# -- ROUTES --
-@router.post("/get-task", response_model=SubmissionJudge|None)
-def get_task(session: SessionDep, judger_name: str = ActiveJudge):
-    submission = session.exec(
-        select(Submission)
-        .where(Submission.status == SUBMISSION_STATUS.QUEUED)
-        .order_by(Submission.date_created, Submission.id)
-        .with_for_update(skip_locked=True)
-    ).first()
-    
-    if not submission:
-        session.commit() # commit to update last_seen
-        return
-
-    submission.status = SUBMISSION_STATUS.PROCESSING
-    submission.judger_name = judger_name
-    submission.judged_date = datetime.now()
-    
-    session.add(submission)
-    session.commit()
-    session.refresh(submission)
-
-    return submission
-
-
-@router.post("/update-result")
-def update_result(payload: SubmissionUpdateResult, session: SessionDep, judger_name: str = ActiveJudge):
-    submission = session.get(Submission, payload.id)
-    if not submission:
-        raise HTTPException(404, "Submission not found")
-
-    update_data = payload.model_dump(exclude={"id"}, exclude_unset=True)
-    
-    submission.sqlmodel_update(update_data)
-    session.add(submission)
-    session.commit()
-    return {"message": "Success"}
+    problem_dir = (BASE_PROBLEMS_DIR / str(id)).resolve()
+    file_path = (problem_dir / path).resolve()
+    if not str(file_path).startswith(str(problem_dir)) or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found or access denied")
+    return FileResponse(path=file_path)

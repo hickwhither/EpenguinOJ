@@ -5,8 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastContainer, Bounce } from 'react-toastify'
 
 // Configs & Contexts
-import { APP_NAME } from './Config'
-import { AuthProvider } from './context/AuthContext'
+import { APP_NAME } from './config'
+import { AuthProvider } from './context/AuthProvider'
 
 // Guis
 import Navbar from './components/layout/Navbar'
