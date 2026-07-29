@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { post_request } from '../Request';
 import { toast } from 'react-toastify';
@@ -6,6 +6,13 @@ import { toast } from 'react-toastify';
 export default function DiscordConfirm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const mounted = useRef(true);
+
+  // FIX 1: Explicitly set mounted.current to true on mount for React 18 Strict Mode
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   const action = searchParams.get('type') || ''; // 'create_account', 'change_password', 'quick_login'
   const secret = searchParams.get('secret') || '';
@@ -18,57 +25,77 @@ export default function DiscordConfirm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // State error
   const [formErrors, setFormErrors] = useState({
     username: '',
     email: '',
     password: '',
   });
 
-
-  const handleQuickLogin = async () => {
+  // Wrapped in useCallback so we can safely call it inside useEffect
+  const handleQuickLogin = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await post_request('/confirm/quick-login', { secret });
-    if (res && res.status >= 200 && res.status < 300) {
-      toast.success("Login successful!");
+    try {
+      const res = await post_request('/confirm/quick-login', { secret });
+      if (!mounted.current) return;
+
+      if (res && res.status >= 200 && res.status < 300) {
+        toast.success("Login successful!");
+        navigate('/', { replace: true });
+      } else {
+        toast.error(res?.data?.detail || "Quick login failed.");
+        navigate('/', { replace: true });
+      }
+    } catch (err) {
+      if (!mounted.current) return;
+      toast.error("A network error occurred during quick login.");
       navigate('/', { replace: true });
-    } else {
-      toast.error(res?.data?.detail || "Quick login failed.");
-      navigate('/', { replace: true });
+    } finally {
+      if (mounted.current) setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [secret, navigate]);
 
-
-  const validateTokenAndProceed = async () => {
-    setIsCheckingToken(true);
-    const checkRes = await post_request('/confirm/check', { secret });
-    if (!checkRes || checkRes.status < 200 || checkRes.status >= 300) {
-      const errorMsg = checkRes?.data?.detail || "Invalid or expired token.";
-      toast.error(errorMsg);
+  useEffect(() => {
+    if (!action || !secret) {
+      toast.error("Confirmation link is missing required parameters.");
       navigate('/', { replace: true });
       return;
     }
-    setIsCheckingToken(false);
-    if (action === 'quick_login') {
-      handleQuickLogin();
-    }
-  };
 
+    const validateTokenAndProceed = async () => {
+      setIsCheckingToken(true);
+      try {
+        const checkRes = await post_request('/confirm/check', { secret });
+        if (!mounted.current) return;
 
-  if (!action || !secret) {
-    toast.error("Confirmation link is missing required parameters.");
-    navigate('/', { replace: true });
-    return;
-  }
-  validateTokenAndProceed();
+        if (!checkRes || checkRes.status < 200 || checkRes.status >= 300) {
+          const errorMsg = checkRes?.data?.detail || "Invalid or expired token.";
+          toast.error(errorMsg);
+          navigate('/', { replace: true });
+          return;
+        }
 
+        setIsCheckingToken(false);
 
-  // Validate phía Client trước khi gửi Request
+        if (action === 'quick_login') {
+          handleQuickLogin();
+        }
+      } catch (err) {
+        // FIX 2: Catch network errors so the screen doesn't get stuck
+        if (!mounted.current) return;
+        toast.error("Failed to verify confirmation link. Please try again.");
+        navigate('/', { replace: true });
+      }
+    };
+
+    validateTokenAndProceed();
+    // FIX 3: Added missing dependencies
+  }, [action, secret, navigate, handleQuickLogin]); 
+
   const validateForm = () => {
     let isValid = true;
     const errors = { username: '', email: '', password: '' };
+    
     if (action === 'create_account') {
       const usernameRegex = /^[a-zA-Z_]+$/;
       if (!username.trim()) {
@@ -126,34 +153,41 @@ export default function DiscordConfirm() {
       return;
     }
 
-    const res = await post_request(endpoint, payload);
+    try {
+      const res = await post_request(endpoint, payload);
+      if (!mounted.current) return;
 
-    if (res && res.status >= 200 && res.status < 300) {
-      toast.success(
-        action === 'create_account'
-          ? "Account created successfully!"
-          : "Password updated successfully!"
-      );
-      navigate('/', { replace: true });
-    } else {
-      const errorMsg = res?.data?.detail || "Action failed.";
-
-      if (res?.status === 401 || res?.status === 408) {
-        toast.error(errorMsg);
+      if (res && res.status >= 200 && res.status < 300) {
+        toast.success(
+          action === 'create_account'
+            ? "Account created successfully!"
+            : "Password updated successfully!"
+        );
         navigate('/', { replace: true });
       } else {
-        if (errorMsg === 'confirm.exist_username') {
-          setFormErrors((prev) => ({ ...prev, username: 'Username is already taken.' }));
-        } else if (errorMsg === 'confirm.exist_email') {
-          setFormErrors((prev) => ({ ...prev, email: 'Email address is already registered.' }));
-        } else if (errorMsg === 'confirm.exist_discord_id') {
-          setError('This Discord account is already linked to another user.');
+        const errorMsg = res?.data?.detail || "Action failed.";
+
+        if (res?.status === 401 || res?.status === 408) {
+          toast.error(errorMsg);
+          navigate('/', { replace: true });
         } else {
-          setError(errorMsg);
+          if (errorMsg === 'confirm.exist_username') {
+            setFormErrors((prev) => ({ ...prev, username: 'Username is already taken.' }));
+          } else if (errorMsg === 'confirm.exist_email') {
+            setFormErrors((prev) => ({ ...prev, email: 'Email address is already registered.' }));
+          } else if (errorMsg === 'confirm.exist_discord_id') {
+            setError('This Discord account is already linked to another user.');
+          } else {
+            setError(errorMsg);
+          }
         }
       }
+    } catch (err) {
+      if (!mounted.current) return;
+      setError("A network error occurred. Please try again.");
+    } finally {
+      if (mounted.current) setLoading(false);
     }
-    setLoading(false);
   };
 
   if (isCheckingToken) {
@@ -188,7 +222,6 @@ export default function DiscordConfirm() {
           )}
         </h1>
 
-        {/* General error */}
         {error && (
           <div className="notification is-danger is-light">
             <button className="delete" onClick={() => setError(null)}></button>

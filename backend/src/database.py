@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from .models import *
 
 def get_database_url() -> str:
-    return os.getenv('DATABASE_URL', "sqlite+aiosqlite:///database.db")
+    return os.getenv('DATABASE_URL') or "sqlite+aiosqlite:///database.db"
 
 
 database_url = get_database_url()
