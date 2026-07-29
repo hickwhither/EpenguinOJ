@@ -3,7 +3,7 @@ import os
 import shutil
 import subprocess
 
-from redis.asyncio import aioredis
+import redis.asyncio as aioredis
 
 from checkers import token
 from submission import Submission

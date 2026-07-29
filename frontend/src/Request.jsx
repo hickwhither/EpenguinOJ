@@ -1,5 +1,5 @@
 import { toast } from "react-toastify";
-const BASE_URL = "/api";
+const BASE_URL = "https://test.hw.io.vn/api";
 
 export async function request(path, options = {}) {
   const config = {
