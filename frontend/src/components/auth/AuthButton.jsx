@@ -21,9 +21,6 @@ export default function AuthButton() {
             </div>
             <div className="dropdown-menu" id="dropdown-menu" role="menu">
                 <div className="dropdown-content">
-                    <div className="dropdown-item">
-                        <p className="is-size-7">{current_user.bio || 'Không có tiểu sử'}</p>
-                    </div>
                     <hr className="dropdown-divider" />
                     <a href="#logout" className="dropdown-item has-text-danger" onClick={(e) => { e.preventDefault(); logout(); }}>
                         Sign out
