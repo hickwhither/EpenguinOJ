@@ -1,5 +1,6 @@
 from typing import *
 from sqlmodel import *
+from sqlalchemy import Column, DateTime
 from datetime import datetime
 
 from .links import ContestTask, ContestRegistration
@@ -13,10 +14,10 @@ if TYPE_CHECKING:
 class ContestPublic(SQLModel):
     id: Optional[int] = Field(primary_key=True)
     name: Optional[str] = Field(index=True)
-    registration_start: Optional[datetime] = Field(index=True)
-    registration_end: Optional[datetime] = Field(index=True)
-    start_time: datetime = Field(index=True)
-    end_time: datetime = Field(index=True)
+    registration_start: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True), index=True))
+    registration_end: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True), index=True))
+    start_time: datetime = Field(sa_column=Column(DateTime(timezone=True), index=True))
+    end_time: datetime = Field(sa_column=Column(DateTime(timezone=True), index=True))
 
 
 class ContestView(ContestPublic):

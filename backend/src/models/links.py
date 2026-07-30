@@ -1,6 +1,8 @@
 from typing import *
 from sqlmodel import *
-from datetime import datetime, timezone
+from sqlalchemy import Column, DateTime
+from datetime import datetime
+from src.utils import utcnow
 
 if TYPE_CHECKING:
     from .user import User
@@ -16,7 +18,10 @@ class ContestTask(SQLModel, table=True):
 
 
 class ContestRegistrationBase(SQLModel):
-    registered_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    registered_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True)),
+        default_factory=utcnow,
+    )
     total_score: float = Field(default=0.0)
     penalty: float = Field(default=0.0)
     old_rating: Optional[int] = Field()

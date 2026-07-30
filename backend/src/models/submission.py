@@ -1,8 +1,9 @@
 from typing import *
 from sqlmodel import *
+from sqlalchemy import Column, DateTime, JSON, Index, TEXT
 from enum import Enum
-from datetime import datetime, timezone
-from sqlalchemy import Index
+from datetime import datetime
+from src.utils import utcnow
 
 
 if TYPE_CHECKING:
@@ -40,7 +41,10 @@ class SubmissionPublic(SQLModel):
     max_score: Optional[float] = Field(default=0.0)
     time_used: Optional[float] = Field()
     memory_used: Optional[float] = Field()
-    date_created: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
+    date_created: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), index=True),
+        default_factory=utcnow,
+    )
 
 
 class SubmissionView(SubmissionPublic):
@@ -58,7 +62,7 @@ class Submission(SubmissionView, table=True):
     )
 
     judger_name: Optional[str] = Field(index=True)
-    judged_date: Optional[datetime] = Field()
+    judged_date: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True)))
     
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
     problem_id: int = Field(foreign_key="problem.id", ondelete="CASCADE", index=True)

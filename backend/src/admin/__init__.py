@@ -10,19 +10,25 @@ from fastadmin.models.base import ModelAdmin
 
 _admin_tz = ZoneInfo(os.environ.get("ADMIN_TIMEZONE", "Asia/Ho_Chi_Minh"))
 
-register_encoder(datetime, lambda dt: (
-    dt.replace(tzinfo=timezone.utc).astimezone(_admin_tz).replace(tzinfo=None)
-    if isinstance(dt, datetime) and dt.tzinfo is None
-    else dt
-))
+
+def _encode_datetime(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_admin_tz).replace(tzinfo=None)
+
+
+register_encoder(datetime, lambda dt: _encode_datetime(dt) if isinstance(dt, datetime) else dt)
+
 
 _orig_deserialize = ModelAdmin.deserialize_value
+
 
 def _patched_deserialize(self, field, value):
     result = _orig_deserialize(self, field, value)
     if isinstance(result, datetime) and field.form_widget_type == WidgetType.DateTimePicker:
-        result = result.replace(tzinfo=_admin_tz).astimezone(timezone.utc).replace(tzinfo=None)
+        result = result.replace(tzinfo=_admin_tz).astimezone(timezone.utc)
     return result
+
 
 ModelAdmin.deserialize_value = _patched_deserialize
 

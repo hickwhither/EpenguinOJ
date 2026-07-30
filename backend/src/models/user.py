@@ -1,6 +1,8 @@
 from typing import *
 from sqlmodel import *
-from datetime import datetime, timezone
+from sqlalchemy import Column, DateTime
+from datetime import datetime
+from src.utils import utcnow
 import random
 
 from .links import ContestRegistration
@@ -49,8 +51,11 @@ class User(UserView, table=True):
     permissions: list[str] = Field(default_factory=list, sa_column=Column(JSON))
 
     # Timestamps
-    last_login: Optional[datetime] = Field(index=True)
-    date_joined: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
+    last_login: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True), index=True))
+    date_joined: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), index=True),
+        default_factory=utcnow,
+    )
 
     # Relationships
     registrations: list[ContestRegistration] = Relationship(back_populates="user", cascade_delete=True)
