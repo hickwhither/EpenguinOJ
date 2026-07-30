@@ -92,7 +92,7 @@ async def serve_file(session: SessionDep, id: int, path: str | None = None):
         problem = await session.get(Problem, id)
         if not problem:
             raise HTTPException(status_code=404, detail="Problem not found")
-        return problem.batches
+        return problem.subtasks
 
     problem_dir = (BASE_PROBLEMS_DIR / str(id)).resolve()
     file_path = (problem_dir / path).resolve()

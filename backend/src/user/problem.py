@@ -25,6 +25,7 @@ from src.models import (
     SubmissionView,
     User,
 )
+from src.redis_sync import sync_problem_to_redis
 
 # CONFIGURATION
 router = APIRouter(tags=["user.problem"], dependencies=[Depends(verify_auth)])
@@ -130,6 +131,8 @@ async def submit_code(
         "source": new_submission.source,
     }
 
+    
+    await sync_problem_to_redis(request.app.state.redis, problem.id)
     await request.app.state.redis.rpush("submission", json.dumps(payload))
 
     return new_submission.id

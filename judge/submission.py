@@ -2,41 +2,16 @@ from __future__ import annotations
 import os, shutil
 import subprocess
 
-
 # Language Executor
-class PythonExecutor:
-    language_id = "python"
-    file_extension = "py"
-    compiled_file_extension = "pyc"
-    version = "python3 --version"
-    command = "/usr/bin/python3 -m compileall -b {source}"
-    executable = "/usr/bin/python3"
-
-
-class CPPExecutor:
-    language_id = "cpp"
-    file_extension = "cpp"
-    compiled_file_extension = "out"
-    version = "g++ --version"
-    command = "/usr/bin/g++ -std=c++14 -Wall -DONLINE_JUDGE -O2 -lm -fmax-errors=5 -march=native -s {source} -o {prog}"
-    executable = ""
-
-
-class TextExecutor:
-    language_id = "text"
-    file_extension = "txt"
-    compiled_file_extension = "txt"
-    version = "cat --version"
-    command = ""
-    executable = "/usr/bin/cat"
-
+from languages.python import PythonExecutor
+from languages.cpp import CPPExecutor
+from languages.text import TextExecutor
 
 lang_dict = {
     "py": PythonExecutor,
     "cpp": CPPExecutor,
     "text": TextExecutor,
 }
-
 
 # IsolateRunner Class
 class Submission:
@@ -62,6 +37,8 @@ class Submission:
         self.meta_path: str | None = None
         self.is_compiled: bool = False
         self.compile_error: str = ""
+        self.executable_name: str = ""
+        self.executable_path: str = ""
 
         shutil.rmtree(self.work_dir, ignore_errors=True)
         os.makedirs(self.work_dir, exist_ok=True)
@@ -94,39 +71,38 @@ class Submission:
         return meta
 
     def _compile(self) -> None:
-        self._init_box()
         src_filename = f"code.{self.executor.file_extension}"
         out_filename = f"code.{self.executor.compiled_file_extension}"
-
-        src_path = os.path.join(self.box_dir, src_filename)
+        src_path = os.path.join(self.work_dir, src_filename)
+        out_path = os.path.join(self.work_dir, out_filename)
         with open(src_path, "w", encoding="utf-8") as f:
             f.write(self.source_code)
-
         raw_cmd = self.executor.command.format(source=src_filename, prog=out_filename)
         compile_args = raw_cmd.split()
-        isolate_cmd = self._base_cmd() + [
-            f"--meta={self.meta_path}",
-            f"--time={self.compile_time_limit}",
-            f"--mem={self.compile_memory_limit}",
-            "--stderr-to-stdout",
-            "--processes=0",
-            "--run", "--"
-        ] + compile_args
 
-        proc = subprocess.run(isolate_cmd, capture_output=True, text=True)
-        meta = self._get_meta()
-        out_path = os.path.join(self.box_dir, out_filename)
+        try:
+            proc = subprocess.run(
+                compile_args,
+                cwd=self.work_dir,
+                capture_output=True,
+                text=True,
+                timeout=self.compile_time_limit
+            )
 
-        if proc.returncode == 0 and os.path.exists(out_path):
-            self.is_compiled = True
-            shutil.copy2(out_path, self.work_dir)
-            self.executable_name = out_filename
-            self.executable_path = os.path.join(self.work_dir, out_filename)
-        else:
+            if proc.returncode == 0 and os.path.exists(out_path):
+                self.is_compiled = True
+                self.executable_name = out_filename
+                self.executable_path = out_path
+            else:
+                self.is_compiled = False
+                self.compile_error = proc.stderr.strip() or proc.stdout.strip() or "Compilation Failed"
+                
+        except subprocess.TimeoutExpired:
             self.is_compiled = False
-            self.compile_error = proc.stdout or meta.get("status", "Compilation Failed")
-
-        subprocess.run(self._base_cmd() + ["--cleanup"], capture_output=True, check=False)
+            self.compile_error = f"Compilation Time Limit Exceeded ({self.compile_time_limit}s)"
+        except Exception as e:
+            self.is_compiled = False
+            self.compile_error = f"Internal Compilation Error: {str(e)}"
 
     def run(
         self,
@@ -143,11 +119,15 @@ class Submission:
                 f.write(self.source_code)
             return {"status": "OK", "time_used": 0.0, "memory_used": 0.0}
         
+        # Chỉ chạy isolate lúc execute (run) code
         self._init_box()
         work_input_path = os.path.join(self.work_dir, "input")
+        
         if os.path.exists(work_input_path):
             box_input_name = input_file_name if input_file_name else "input.in"
             shutil.copy2(work_input_path, os.path.join(self.box_dir, box_input_name))
+            
+        # Copy file đã được compile từ work_dir sang isolate box
         shutil.copy2(self.executable_path, self.box_dir)
 
         exec_args = ([self.executor.executable] if self.executor.executable else []) + [self.executable_name]

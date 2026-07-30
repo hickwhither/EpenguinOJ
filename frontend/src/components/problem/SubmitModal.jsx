@@ -17,7 +17,7 @@ export default function SubmitModal({ isOpen, onClose, problem_id, problemName, 
       if (problem_id) params.append('problem_id', problem_id);
       if (contest_code) params.append('contest_id', contest_code);
 
-      const res = await post_request(`/submit_id?${params.toString()}`, { language, source });
+      const res = await post_request(`/submit_code?${params.toString()}`, { language, source });
       
       if (res.status === 201 || res.status === 200) {
         toast.success("Submit code success!");

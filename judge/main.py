@@ -16,7 +16,6 @@ BOX_ID = args.box_id
 from standard import process_submission
 
 async def start_worker():
-    print(REDIS_URL)
     redis_client = Redis.from_url(
         REDIS_URL, 
         decode_responses=True,

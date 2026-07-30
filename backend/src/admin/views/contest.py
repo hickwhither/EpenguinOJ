@@ -17,7 +17,7 @@ class ContestAdmin(SqlAlchemyModelAdmin):
     list_display_links = ("id", "name")
     search_fields = ("name", "description")
     formfield_overrides = {
-        "description": (WidgetType.TextArea),
+        "description": (WidgetType.TextArea,{}),
         "password": (WidgetType.PasswordInput, {"required": False}),
     }
 

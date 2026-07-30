@@ -69,5 +69,5 @@ class Submission(SubmissionView, table=True):
     problem: "Problem" = Relationship(back_populates="submissions")
     userhacks: "UserHack" = Relationship(back_populates="submission", cascade_delete=True)
 
-    def __str__(self): return f"{self.id}(by {self.user.username})"
-    def __repr__(self): return f"Submission({self.id} by {self.user.username})"
+    def __str__(self): return f"{self.id}(by {self.user_id})"
+    def __repr__(self): return f"Submission({self.id} by {self.user_id})"

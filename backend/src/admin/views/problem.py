@@ -11,21 +11,47 @@ from src.database import async_session_maker
 from src.models import Submission, Subtask, Problem, Hack
 from ..config import redis_client
 from src.redis_sync import sync_problem_to_redis
+from .judging import SubmissionAdmin
 
 
-# INLINES
-class SubtaskInline(SqlAlchemyInlineModelAdmin):
+@register(Subtask, sqlalchemy_sessionmaker=async_session_maker)
+class SubtaskAdmin(SqlAlchemyModelAdmin):
+    menu_section = "Problem"
     list_display = ("id", "problem_id", "name", "description", "points")
-    fk_name = "problem_id"
+    list_filter = {"problem_id", }
+    search_fields = ("name", "description", )
     formfield_overrides = {
-        "description": (WidgetType.TextArea, {"rows": 2}),
-        "generator": (WidgetType.TextArea, {"rows": 4}),
-        "validator": (WidgetType.TextArea, {"rows": 4}),
-        "seeds": (WidgetType.JsonTextArea, {"rows": 2}),
+        "description": (WidgetType.TextArea,{}),
+        "generator": (WidgetType.TextArea, {}),
+        "validator": (WidgetType.TextArea, {}),
+        "seeds": (WidgetType.JsonTextArea, {}),
     }
 
 
-# REGISTERS
+
+@register(Hack, sqlalchemy_sessionmaker=async_session_maker)
+class HackAdmin(SqlAlchemyModelAdmin):
+    menu_section = "Problem"
+    list_display = ("id", "description", "subtask" "language",)
+    list_filter = ("subtask", "language")
+    search_fields = ("description", "subtask")
+    formfield_overrides = {
+        "source": (WidgetType.TextArea, {}),
+    }
+
+
+# INLINES
+class SubtaskInline(SubtaskAdmin, SqlAlchemyInlineModelAdmin):
+    model = Subtask
+    fk_name = "problem_id"
+
+
+class SubmissionInLine(SubmissionAdmin, SqlAlchemyInlineModelAdmin):
+    model = Submission
+    fk_name = "problem_id"
+
+# ---
+
 @register(Problem, sqlalchemy_sessionmaker=async_session_maker)
 class ProblemAdmin(SqlAlchemyModelAdmin):
     menu_section = "Problem"
@@ -34,8 +60,11 @@ class ProblemAdmin(SqlAlchemyModelAdmin):
     list_filter = ("is_public",)
     search_fields = ("name", "statement")
     formfield_overrides = {
-        "statement": (WidgetType.RichTextArea, {"rows": 6}),
+        "statement": (WidgetType.TextArea, {}),
+        "answer": (WidgetType.TextArea, {}),
+        "checker": (WidgetType.TextArea, {}),
     }
+    inlines = (SubtaskInline, SubmissionInLine,)
 
     actions = ("sync_to_redis", "rejudge_all_submission")
 
@@ -56,27 +85,3 @@ class ProblemAdmin(SqlAlchemyModelAdmin):
         return ActionResponseSchema(type=ActionResponseType.MESSAGE, data=f"Queued {len(submissions)} submission(s) from {id}")
 
 
-@register(Subtask, sqlalchemy_sessionmaker=async_session_maker)
-class SubtaskAdmin(SqlAlchemyModelAdmin):
-    menu_section = "Problem"
-    list_display = ("id", "problem_id", "name", "description", "points")
-    list_filter = {"problem_id", }
-    search_fields = ("name", "description", )
-    formfield_overrides = {
-        "description": (WidgetType.TextArea, {"rows": 4}),
-        "generator": (WidgetType.TextArea, {"rows": 8}),
-        "validator": (WidgetType.TextArea, {"rows": 8}),
-        "seeds": (WidgetType.JsonTextArea, {"rows": 4}),
-    }
-
-
-
-@register(Hack, sqlalchemy_sessionmaker=async_session_maker)
-class HackAdmin(SqlAlchemyModelAdmin):
-    menu_section = "Problem"
-    list_display = ("id", "description", "batch" "language",)
-    list_filter = ("batch", "language")
-    search_fields = ("description", "batch")
-    formfield_overrides = {
-        "source": (WidgetType.TextArea, {"rows": 8}),
-    }

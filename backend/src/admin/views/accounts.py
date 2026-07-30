@@ -14,8 +14,9 @@ class UserAdmin(SqlAlchemyModelAdmin):
     search_fields = ("username", "email", "discord_id", "nickname")
     readonly_fields = ("id", "date_joined", "last_login")
     formfield_overrides = {
-        "password": (WidgetType.PasswordInput, {"passwordModalForm": True}),
-        "bio": (WidgetType.TextArea),
+        "password": (WidgetType.PasswordInput,{"passwordModalForm": True}),
+        "bio": (WidgetType.TextArea,{}),
+        "permissions": (WidgetType.JsonTextArea, {})
     }
 
     async def authenticate(self, username: str, password: str) -> int | None:
@@ -35,3 +36,4 @@ class UserAdmin(SqlAlchemyModelAdmin):
             if user:
                 user.password = hash_password(password)
                 await session.commit()
+
