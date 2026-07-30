@@ -1,5 +1,4 @@
 import os, jwt
-from datetime import timedelta
 from fastapi import APIRouter
 
 from src.utils import utcnow
@@ -23,7 +22,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
 
-class VerifyCreateRequest(BaseModel):   
+class VerifyCreateRequest(BaseModel):
     discord_id: str
 
 # -- ROUTERS --
@@ -34,11 +33,10 @@ async def is_user_exists(session: SessionDep, discord_id: str):
 
 @router.post("/create")
 def create_verify(data: VerifyCreateRequest):
-    expire = utcnow() + timedelta(minutes=5)
+    expire = utcnow() + 300  # 5 minutes in seconds
     payload = {
         "discord_id": data.discord_id,
         "exp": expire
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return token
-

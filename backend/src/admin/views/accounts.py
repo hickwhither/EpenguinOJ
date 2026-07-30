@@ -4,15 +4,18 @@ from sqlalchemy import select
 from src.database import async_session_maker
 from src.dependencies import hash_password, verify_password
 from src.models import User
+from .. import TimestampAdminMixin
+
 
 @register(User, sqlalchemy_sessionmaker=async_session_maker)
-class UserAdmin(SqlAlchemyModelAdmin):
+class UserAdmin(TimestampAdminMixin, SqlAlchemyModelAdmin):
     menu_section = "Accounts"
     list_display = ("id", "username", "email", "active", "superuser", "date_joined")
     list_display_links = ("id", "username")
     list_filter = ("active", "superuser", "rank")
     search_fields = ("username", "email", "discord_id", "nickname")
     readonly_fields = ("id", "date_joined", "last_login")
+    timestamp_fields = ("date_joined", "last_login")
     formfield_overrides = {
         "password": (WidgetType.PasswordInput,{"passwordModalForm": True}),
         "bio": (WidgetType.TextArea,{}),
@@ -36,4 +39,3 @@ class UserAdmin(SqlAlchemyModelAdmin):
             if user:
                 user.password = hash_password(password)
                 await session.commit()
-

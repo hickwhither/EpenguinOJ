@@ -1,8 +1,7 @@
 from typing import *
 from sqlmodel import *
-from sqlalchemy import Column, DateTime, JSON, Index, TEXT
+from sqlalchemy import Column, JSON, Index, TEXT
 from enum import Enum
-from datetime import datetime
 from src.utils import utcnow
 
 
@@ -41,10 +40,7 @@ class SubmissionPublic(SQLModel):
     max_score: Optional[float] = Field(default=0.0)
     time_used: Optional[float] = Field()
     memory_used: Optional[float] = Field()
-    date_created: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), index=True),
-        default_factory=utcnow,
-    )
+    date_created: int = Field(default_factory=utcnow, index=True)
 
 
 class SubmissionView(SubmissionPublic):
@@ -56,14 +52,13 @@ class SubmissionView(SubmissionPublic):
 
 class Submission(SubmissionView, table=True):
     __table_args__ = (
-        # Filter sort: contest -> user -> problem 
         Index("idx_user_problem", "user_id", "problem_id"),
         Index("idx_contest_user", "contest_id", "user_id"),
     )
 
     judger_name: Optional[str] = Field(index=True)
-    judged_date: Optional[datetime] = Field(sa_column=Column(DateTime(timezone=True)))
-    
+    judged_date: Optional[int] = Field(default=None)
+
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
     problem_id: int = Field(foreign_key="problem.id", ondelete="CASCADE", index=True)
     contest_id: Optional[int] = Field(foreign_key="contest.id", ondelete="SET NULL")

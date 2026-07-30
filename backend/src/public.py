@@ -1,12 +1,11 @@
 from pydantic import BaseModel
-from datetime import datetime
 from typing import Any
 
 
 #Submission
 class SubmissionPublic(BaseModel):
     id: int
-    
+
     # Cell 1
     percentage: float | None
     max_score: float | None
@@ -16,7 +15,7 @@ class SubmissionPublic(BaseModel):
     # Cell 2
     problem: "ProblemPublic"
     user: "UserPublic"
-    date_created: datetime
+    date_created: int
     # + Admin buttons
 
     # Cell 3

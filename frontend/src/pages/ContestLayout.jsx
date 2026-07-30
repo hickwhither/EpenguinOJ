@@ -32,8 +32,8 @@ export default function ContestLayout() {
   if (isLoading) return <div className="box">Loading contest…</div>;
   if (error) return <div className="box has-text-danger">{error.message}</div>;
 
-  const startTime = contest?.start_time ? new Date(contest.start_time) : null;
-  const endTime = contest?.end_time ? new Date(contest.end_time) : null;
+  const startTime = contest?.start_time ? new Date(contest.start_time * 1000) : null;
+  const endTime = contest?.end_time ? new Date(contest.end_time * 1000) : null;
   const getProgressValue = () => {
     if (!startTime || !endTime) return 0;
     const current = now.getTime();

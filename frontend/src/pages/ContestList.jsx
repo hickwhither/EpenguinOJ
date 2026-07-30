@@ -22,9 +22,9 @@ const formatDate = (value) => {
 
 const calculateDuration = (startTime, endTime) => {
   if (!startTime || !endTime) return '-';
-  const diffMs = new Date(endTime) - new Date(startTime);
-  if (diffMs <= 0) return '0m';
-  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffSeconds = endTime - startTime;
+  if (diffSeconds <= 0) return '0m';
+  const totalMinutes = Math.floor(diffSeconds / 60);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   return hours > 0 ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}` : `${minutes}m`;

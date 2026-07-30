@@ -16,4 +16,3 @@ def setup_admin_env():
     os.environ.setdefault("ADMIN_SITE_FAVICON", "/logo.png")
 
     os.environ.setdefault("ADMIN_TIMEZONE", "Asia/Ho_Chi_Minh")
-    os.environ.setdefault("ADMIN_DATETIME_FORMAT", "YYYY-MM-DD HH:mm:ss")
