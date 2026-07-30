@@ -1,6 +1,7 @@
 from fastapi import HTTPException, Request
 from sqlmodel import select
-from datetime import datetime, timezone
+
+from src.utils import utcnow
 
 from src.database import SessionDep
 from src.models import User
@@ -15,7 +16,7 @@ async def get_contest_or_404(session: SessionDep, id: str) -> Contest:
 
 
 def is_contest_running(contest: Contest) -> None:
-    now = datetime.now()
+    now = utcnow()
     if now < contest.start_time:
         return False
     if now > contest.end_time:
@@ -24,7 +25,7 @@ def is_contest_running(contest: Contest) -> None:
 
 
 def ensure_contest_running(contest: Contest) -> None:
-    now = datetime.now()
+    now = utcnow()
     if now < contest.start_time:
         raise HTTPException(403, "contest.upcoming")
     if now > contest.end_time:
@@ -32,7 +33,7 @@ def ensure_contest_running(contest: Contest) -> None:
 
 
 def ensure_registration_running(contest: Contest) -> None:
-    now = datetime.now()
+    now = utcnow()
     if contest.registration_start and now < contest.registration_start:
         raise HTTPException(403, "contest.registration_upcoming")
     if contest.registration_end and now > contest.registration_end:

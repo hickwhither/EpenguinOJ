@@ -1,7 +1,7 @@
 from typing import *
 from sqlmodel import *
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Index
 
 
@@ -40,7 +40,7 @@ class SubmissionPublic(SQLModel):
     max_score: Optional[float] = Field(default=0.0)
     time_used: Optional[float] = Field()
     memory_used: Optional[float] = Field()
-    date_created: datetime = Field(default_factory=datetime.now, index=True)
+    date_created: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
 
 
 class SubmissionView(SubmissionPublic):

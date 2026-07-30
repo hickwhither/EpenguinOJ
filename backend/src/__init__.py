@@ -15,6 +15,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .database import async_session_maker, init_db
 from .models import ContestRegistration, Problem, Submission
+from .utils import utcnow
 
 
 async def consume_results(redis):
@@ -38,7 +39,7 @@ async def consume_results(redis):
                     sub.results = data.get("results", sub.results)
                     sub.error = data.get("error")
                     sub.judger_name = data.get("judger_name", sub.judger_name)
-                    sub.judged_date = __import__("datetime").datetime.now()
+                    sub.judged_date = utcnow()
                     session.add(sub)
 
                     if sub.contest_id:

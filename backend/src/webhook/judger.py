@@ -1,4 +1,6 @@
 from datetime import datetime
+
+from src.utils import utcnow
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from sqlmodel import select
@@ -68,7 +70,7 @@ async def report_result(session: SessionDep, submission_id: int, body: JudgeResu
     submission.results = [r.model_dump() for r in body.results]
     submission.error = body.error
     submission.judger_name = body.judger_name
-    submission.judged_date = datetime.now()
+    submission.judged_date = utcnow()
     session.add(submission)
 
     if submission.contest_id:

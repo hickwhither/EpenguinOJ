@@ -14,3 +14,5 @@ def setup_admin_env():
     os.environ.setdefault("ADMIN_SITE_SIGN_IN_LOGO", "/logo.png")
     os.environ.setdefault("ADMIN_SITE_HEADER_LOGO", "/logo.png")
     os.environ.setdefault("ADMIN_SITE_FAVICON", "/logo.png")
+
+    os.environ.setdefault("ADMIN_TIMEZONE", "Asia/Ho_Chi_Minh")

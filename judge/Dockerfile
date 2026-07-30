@@ -1,7 +1,8 @@
 FROM python:3.12-slim
 
+ENV TZ=UTC
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends g++ make libcap-dev pkg-config ca-certificates git curl \
+    && apt-get install -y --no-install-recommends tzdata g++ make libcap-dev pkg-config ca-certificates git curl \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && git clone --depth 1 https://github.com/ioi/isolate.git /tmp/isolate \
     && make -C /tmp/isolate isolate install \

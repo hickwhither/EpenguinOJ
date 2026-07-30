@@ -1,6 +1,6 @@
 from typing import *
 from sqlmodel import *
-from datetime import datetime
+from datetime import datetime, timezone
 import random
 
 from .links import ContestRegistration
@@ -50,7 +50,7 @@ class User(UserView, table=True):
 
     # Timestamps
     last_login: Optional[datetime] = Field(index=True)
-    date_joined: datetime = Field(default_factory=datetime.now, index=True)
+    date_joined: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
 
     # Relationships
     registrations: list[ContestRegistration] = Relationship(back_populates="user", cascade_delete=True)

@@ -1,4 +1,4 @@
-from datetime import datetime
+from src.utils import utcnow
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -73,7 +73,7 @@ def transform_contest_with_is_registered(results) -> list[ContestPublic]:
 async def get_ongoing_contests(
     session: SessionDep, current_user: User = Depends(verify_auth)
 ):
-    now = datetime.now()
+    now = utcnow()
     statement = (
         build_contest_is_registered(current_user)
         .where(Contest.start_time <= now, Contest.end_time >= now)
@@ -87,7 +87,7 @@ async def get_ongoing_contests(
 async def get_upcoming_contests(
     session: SessionDep, current_user: User = Depends(verify_auth)
 ):
-    now = datetime.now()
+    now = utcnow()
     statement = (
         build_contest_is_registered(current_user)
         .where(Contest.start_time > now)
@@ -99,7 +99,7 @@ async def get_upcoming_contests(
 
 @router.get("/ended", response_model=Page[ContestPublic])
 async def get_ended_contests(session: SessionDep, search: str | None = None):
-    now = datetime.now()
+    now = utcnow()
     statement = select(Contest).where(Contest.end_time < now)
     if search:
         search_filter = f"%{search.strip()}%"

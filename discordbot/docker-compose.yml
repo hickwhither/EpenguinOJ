@@ -12,6 +12,8 @@ services:
       - ./cktoj-users-abcxyzhehe-firebase-adminsdk.json:/app/cktoj-users-abcxyzhehe-firebase-adminsdk.json:ro
       # Mount button message state file for persistence
       - ./button_message.json:/app/button_message.json
+    environment:
+      - TZ=UTC
     env_file:
       - .env
     networks:

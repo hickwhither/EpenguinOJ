@@ -1,11 +1,14 @@
 # Use Python 3.12 as the base image
 FROM python:3.12-slim
 
+ENV TZ=UTC
+
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
+    tzdata \
     libffi-dev \
     libnacl-dev \
     python3-dev \

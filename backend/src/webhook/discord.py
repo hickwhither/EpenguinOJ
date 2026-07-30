@@ -1,6 +1,8 @@
 import os, jwt
-from datetime import *
+from datetime import timedelta
 from fastapi import APIRouter
+
+from src.utils import utcnow
 from pydantic import BaseModel, EmailStr
 
 # CONFIGURATIONS
@@ -32,7 +34,7 @@ async def is_user_exists(session: SessionDep, discord_id: str):
 
 @router.post("/create")
 def create_verify(data: VerifyCreateRequest):
-    expire = datetime.now() + timedelta(minutes=5)
+    expire = utcnow() + timedelta(minutes=5)
     payload = {
         "discord_id": data.discord_id,
         "exp": expire
