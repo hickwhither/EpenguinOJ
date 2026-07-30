@@ -40,6 +40,11 @@ export const AuthProvider = ({ children }) => {
     else setIsLoginModalActive(true);
   };
 
+  const refreshProfile = async () => {
+    const res = await get_request('/auth/profile');
+    if (res.status === 200) setUser(res.data);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -50,6 +55,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         loginRequired,
+        refreshProfile,
       }}
     >
       {children}

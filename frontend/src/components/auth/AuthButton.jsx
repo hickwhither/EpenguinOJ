@@ -1,8 +1,9 @@
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 const defaultAvatar = "https://bulma.io/assets/images/placeholders/128x128.png";
 
 export default function AuthButton() {
-    const { current_user, loading, logout, setIsLoginModalActive: setIsLoginModalActive } = useAuth();
+    const { current_user, loading, logout, setIsLoginModalActive } = useAuth();
 
     if (loading) return <></>;
 
@@ -21,6 +22,12 @@ export default function AuthButton() {
             </div>
             <div className="dropdown-menu" id="dropdown-menu" role="menu">
                 <div className="dropdown-content">
+                    <Link to={`/profile/${current_user.username}`} className="dropdown-item">
+                        Profile
+                    </Link>
+                    <Link to="/profile/settings" className="dropdown-item">
+                        Settings
+                    </Link>
                     <hr className="dropdown-divider" />
                     <a href="#logout" className="dropdown-item has-text-danger" onClick={(e) => { e.preventDefault(); logout(); }}>
                         Sign out

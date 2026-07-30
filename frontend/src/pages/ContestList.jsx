@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { get_request } from '../Request';
+import { formatDateWithLink } from '../dateUtils';
 import RegisterContestButton from '../components/contest/ContestRegister';
 
 /* --- HELPERS --- */
@@ -14,7 +15,10 @@ function useDebounce(value, delay = 500) {
   return debouncedValue;
 }
 
-const formatDate = (value) => (value ? new Date(value).toLocaleString() : '-');
+const formatDate = (value) => {
+  if (!value) return '-';
+  return formatDateWithLink(value).text;
+};
 
 const calculateDuration = (startTime, endTime) => {
   if (!startTime || !endTime) return '-';
@@ -44,10 +48,10 @@ const ContestCard = ({ contest, type, onViewDetails, onRegisterSuccess }) => {
         <h2 className="title is-5 my-auto">{contest.name || `Contest #${contest.id}`}</h2>
 
         <div className="content is-3 my-2">
-          <div><strong>Reg Start:</strong> {formatDate(contest.registration_start)}</div>
-          <div><strong>Reg End:</strong> {formatDate(contest.registration_end)}</div>
-          <div><strong>Start:</strong> {formatDate(contest.start_time)}</div>
-          <div><strong>End:</strong> {formatDate(contest.end_time)}</div>
+          <div><strong>Reg Start:</strong> <a href={formatDateWithLink(contest.registration_start).link} target="_blank" rel="noopener noreferrer">{formatDate(contest.registration_start)}</a></div>
+          <div><strong>Reg End:</strong> <a href={formatDateWithLink(contest.registration_end).link} target="_blank" rel="noopener noreferrer">{formatDate(contest.registration_end)}</a></div>
+          <div><strong>Start:</strong> <a href={formatDateWithLink(contest.start_time).link} target="_blank" rel="noopener noreferrer">{formatDate(contest.start_time)}</a></div>
+          <div><strong>End:</strong> <a href={formatDateWithLink(contest.end_time).link} target="_blank" rel="noopener noreferrer">{formatDate(contest.end_time)}</a></div>
           <div><strong>Duration:</strong> {calculateDuration(contest.start_time, contest.end_time)}</div>
         </div>
 

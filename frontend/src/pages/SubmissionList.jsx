@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { get_request } from '../Request';
+import { formatDateWithLink } from '../dateUtils';
 
 const STATUS_LABEL = { QW: 'Queued', C: 'Compiling', P: 'Processing', D: 'Done' };
 
@@ -11,15 +12,6 @@ const getStatusBgClass = (score, status) => {
   if (status === 'D' && score === 0) return 'has-background-grey-light has-text-dark';
   if (status === 'C' || status === 'P') return 'has-background-info has-text-white';
   return 'has-background-grey-light has-text-dark';
-};
-
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleString('vi-VN', {
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  });
 };
 
 const fetchSubmissions = async ({ is_best, problem_id, contest_id, username, page }) => {
@@ -88,7 +80,7 @@ function SubmissionRow({ sub, page, pageSize }) {
               [{sub.contest.name}]
             </span>
           )}
-          <span>&bull; {formatDate(sub.date_created)}</span>
+          <span>&bull; <a href={formatDateWithLink(sub.date_created).link} target="_blank" rel="noopener noreferrer">{formatDateWithLink(sub.date_created).text}</a></span>
         </div>
       </div>
       <div className="is-hidden-mobile mr-4 is-size-7">

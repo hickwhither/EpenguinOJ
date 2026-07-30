@@ -26,6 +26,8 @@ import ContestLayout from './pages/ContestLayout'
 import ContestInfo from './pages/ContestLayouts/ContestInfo'
 import ContestRanking from './pages/ContestLayouts/ContestRanking'
 import SubmissionList from './pages/SubmissionList'
+import ProfilePage from './pages/ProfilePage'
+import ProfileSettings from './pages/ProfileSettings'
 
 const queryClient = new QueryClient()
 
@@ -54,6 +56,8 @@ function App() {
           </Route>
           <Route path="/contests" element={<RequireAuth><ContestList /></RequireAuth>} />
           
+          <Route path="/profile/settings" element={<RequireAuth><ProfileSettings /></RequireAuth>} />
+          <Route path="/profile/:username" element={<RequireAuth><ProfilePage /></RequireAuth>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

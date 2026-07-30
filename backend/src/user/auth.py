@@ -27,6 +27,12 @@ class PasswordForm(BaseModel):
     password: str
 
 
+class ProfileUpdate(BaseModel):
+    nickname: str | None = None
+    bio: str | None = None
+    avatar_url: str | None = None
+
+
 # ROUTERS
 # @router.post("/signup", response_model=UserView, status_code=201)
 # async def signup(request: Request, new_user: CreateAccount, session: SessionDep):
@@ -72,3 +78,15 @@ async def profile(request: Request, session: SessionDep, username: str | None = 
     if not username:
         return await verify_auth(request, session)
     return await get_user_or_404(session, username)
+
+
+@router.patch("/profile", response_model=UserView)
+async def update_profile(request: Request, session: SessionDep, payload: ProfileUpdate):
+    user = await verify_auth(request, session)
+    update_data = payload.model_dump(exclude_none=True)
+    for key, value in update_data.items():
+        setattr(user, key, value)
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user
