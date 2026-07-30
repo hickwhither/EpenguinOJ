@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from fastadmin import WidgetType, fastapi_app as admin_app, register_encoder
 from fastadmin.models.base import ModelAdmin
 
-_admin_tz = ZoneInfo(os.environ.get("ADMIN_TIMEZONE", "UTC"))
+_admin_tz = ZoneInfo(os.environ.get("ADMIN_TIMEZONE", "Asia/Ho_Chi_Minh"))
 
 register_encoder(datetime, lambda dt: (
     dt.replace(tzinfo=timezone.utc).astimezone(_admin_tz).replace(tzinfo=None)
