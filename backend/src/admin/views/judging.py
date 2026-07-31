@@ -4,7 +4,7 @@ from fastadmin import (
     ActionResponseSchema, ActionResponseType,
     register, action,
 )
-
+from sqlmodel import select
 from src.database import async_session_maker
 from src.models import Submission, UserHack
 from ..config import redis_client
@@ -28,18 +28,31 @@ class SubmissionAdmin(TimestampAdminMixin, SqlAlchemyModelAdmin):
 
     actions = ("rejudge", "rejudge_all_submission")
 
-    @action(description="Rejudge all submissions")
-    async def rejudge(self, id: int):
+    @action(description="Rejudge submissions")
+    async def rejudge(self, ids: list[int]|None = None):
         async with async_session_maker() as session:
-            sub = await session.get(Submission, id)
-            payload = {
-                "submission_id": sub.id,
-                "problem_id": sub.problem_id,
-                "language": sub.language,
-                "source": sub.source,
-            }
-            await sync_problem_to_redis(redis_client, sub.problem_id)
-            await redis_client.rpush("submission", json.dumps(payload))
+            stmt = select(Submission).where(Submission.id.in_(ids))
+            result = await session.exec(stmt)
+            submissions = result.all()
+            if not submissions:
+                return
+
+            problem_ids = {sub.problem_id for sub in submissions}
+            for problem_id in problem_ids:
+                await sync_problem_to_redis(redis_client, problem_id)
+
+            payloads = [
+                json.dumps({
+                    "submission_id": sub.id,
+                    "problem_id": sub.problem_id,
+                    "language": sub.language,
+                    "source": sub.source,
+                })
+                for sub in submissions
+            ]
+
+            if payloads:
+                await redis_client.rpush("submission", *payloads)
 
 
 @register(UserHack, sqlalchemy_sessionmaker=async_session_maker)

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import apaginate
 from pydantic import BaseModel
+from sqlalchemy.orm import selectinload
 from sqlmodel import or_, select
 from starlette.responses import StreamingResponse
 
@@ -130,7 +131,6 @@ async def submit_code(
         "language": new_submission.language,
         "source": new_submission.source,
     }
-
     
     await sync_problem_to_redis(request.app.state.redis, problem.id)
     await request.app.state.redis.rpush("submission", json.dumps(payload))
@@ -146,7 +146,11 @@ async def get_list_submission(
     problem_id: str | None = None,
     username: str | None = None,
 ):
-    query = select(Submission)
+    query = select(Submission).options(
+        selectinload(Submission.user),
+        selectinload(Submission.contest),
+        selectinload(Submission.problem),
+    )
 
     if contest_id:
         contest = await get_contest_or_404(session, contest_id)
@@ -178,7 +182,16 @@ async def get_submission(
     id: int,
     current_user: User = Depends(verify_auth),
 ):
-    submission = await session.get(Submission, id)
+    stmt = (
+        select(Submission)
+        .options(
+            selectinload(Submission.user),
+            selectinload(Submission.contest),
+            selectinload(Submission.problem),
+        )
+        .where(Submission.id == id)
+    )
+    submission = (await session.scalars(stmt)).first()
     if not submission:
         raise HTTPException(404, "submission.notfound")
     if current_user.id != submission.user_id:
@@ -193,6 +206,7 @@ async def get_submission(
             submission.max_score = data.get("max_score", submission.max_score)
             submission.time_used = data.get("time_used", submission.time_used)
             submission.memory_used = data.get("memory_used", submission.memory_used)
+            submission.results = data.get("results", submission.results)
 
     return submission
 

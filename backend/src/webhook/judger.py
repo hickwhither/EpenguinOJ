@@ -23,11 +23,19 @@ class StatusUpdate(BaseModel):
 
 
 class TestCaseResult(BaseModel):
-    subtask: str
+    verdict: str
     time_used: float = 0.0
     memory_used: float = 0.0
-    verdict: str
     feedback: str | None = None
+
+
+class SubtaskResult(BaseModel):
+    subtask: str | int | None = None
+    verdict: str | None = None
+    time_used: float = 0.0
+    memory_used: float = 0.0
+    feedback: str | None = None
+    test_cases: list[TestCaseResult] = []
 
 
 class JudgeResult(BaseModel):
@@ -36,7 +44,7 @@ class JudgeResult(BaseModel):
     max_score: float = 0.0
     time_used: float = 0.0
     memory_used: float = 0.0
-    results: list[TestCaseResult] = []
+    results: list[SubtaskResult] = []
     error: str | None = None
     judger_name: str = ""
 

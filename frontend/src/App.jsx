@@ -1,17 +1,11 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ToastContainer, Bounce } from 'react-toastify'
+import { Routes, Route } from 'react-router-dom'
 
-// Configs & Contexts
+// Configs
 import { APP_NAME } from './config'
-import { AuthProvider } from './context/AuthProvider'
 
 // Guis
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
-import LoginModal from './components/auth/LoginModal'
 import RequireAuth from './components/auth/RequireAuth'
 
 // Pages
@@ -29,13 +23,9 @@ import SubmissionList from './pages/SubmissionList'
 import ProfilePage from './pages/ProfilePage'
 import ProfileSettings from './pages/ProfileSettings'
 
-const queryClient = new QueryClient()
-
-function App() {
+export default function App() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <ToastContainer position="bottom-right" autoClose={5000} theme="dark" transition={Bounce} />
-      
       <Navbar />
 
       <section className="section mt-5" style={{ flex: 1 }}>
@@ -67,16 +57,3 @@ function App() {
     </div>
   )
 }
-
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <App />
-          <LoginModal />
-        </AuthProvider>
-      </QueryClientProvider>
-    </BrowserRouter>
-  </StrictMode>
-)

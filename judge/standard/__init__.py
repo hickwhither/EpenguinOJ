@@ -10,6 +10,42 @@ from .storage import load_problem_and_subtasks, push_final_result, write_live
 from submission import Submission
 
 
+def _new_result_group(st_id, verdict="AC", feedback=None, time_used=0, memory_used=0):
+    return {
+        "subtask": st_id,
+        "verdict": verdict,
+        "feedback": feedback,
+        "time_used": time_used,
+        "memory_used": memory_used,
+        "test_cases": [],
+    }
+
+
+def _upsert_group(results, st_id, verdict="AC", feedback=None, time_used=0, memory_used=0):
+    group = next((g for g in results if g["subtask"] == st_id), None)
+    if group is None:
+        group = _new_result_group(st_id, verdict, feedback, time_used, memory_used)
+        results.append(group)
+    else:
+        if group["verdict"] == "AC" and verdict != "AC":
+            group["verdict"] = verdict
+        if feedback:
+            group["feedback"] = feedback
+        group["time_used"] = max(group["time_used"], time_used)
+        group["memory_used"] = max(group["memory_used"], memory_used)
+    return group
+
+
+def _push_testcase(results, st_id, verdict, time_used, memory_used, feedback=None):
+    group = _upsert_group(results, st_id, verdict, time_used=time_used, memory_used=memory_used)
+    group["test_cases"].append({
+        "verdict": verdict,
+        "time_used": time_used,
+        "memory_used": memory_used,
+        "feedback": feedback,
+    })
+
+
 async def process_submission(
     payload: dict,
     box_id: int = 0,
@@ -40,7 +76,7 @@ async def process_submission(
             await push_final_result(redis, submission_id, {
                 "status": "D", "score": 0, "max_score": 0,
                 "time_used": 0, "memory_used": 0,
-                "results": [{"verdict": "IE", "feedback": "Problem not found in Redis"}],
+                "results": [_new_result_group(None, "IE", "Problem not found in Redis")],
                 "error": "Problem not found", "judger_name": judger_name,
             })
             return
@@ -51,7 +87,7 @@ async def process_submission(
             await push_final_result(redis, submission_id, {
                 "status": "D", "score": 0, "max_score": 0,
                 "time_used": 0, "memory_used": 0,
-                "results": [{"verdict": "CE", "feedback": user.compile_error}],
+                "results": [_new_result_group(None, "CE", user.compile_error)],
                 "error": "Compilation Error", "judger_name": judger_name,
             })
             return
@@ -64,7 +100,7 @@ async def process_submission(
             await push_final_result(redis, submission_id, {
                 "status": "D", "score": 0, "max_score": 0,
                 "time_used": 0, "memory_used": 0,
-                "results": [{"verdict": "IE", "feedback": "Failed to compile official answer"}],
+                "results": [_new_result_group(None, "IE", "Failed to compile official answer")],
                 "error": "Answer compile failed", "judger_name": judger_name,
             })
             return
@@ -96,7 +132,7 @@ async def process_submission(
             gen_src = subtask.get("generator", "")
             gen_bin = os.path.join(judge_dir, f"gen_{subtask.get('id', '?')}")
             if not compile_cpp(gen_src, gen_bin, judge_dir):
-                results.append({"subtask": st_id, "verdict": "IE", "feedback": "Generator compile failed", "time_used": 0, "memory_used": 0})
+                _upsert_group(results, st_id, "IE", "Generator compile failed")
                 await write_live(redis, submission_id, {
                     "status": "P", "score": total_score, "max_score": max_score,
                     "time_used": time_used, "memory_used": memory_used,
@@ -109,14 +145,14 @@ async def process_submission(
                 # Sinh Input
                 gen_res = run_generator(gen_bin, seed, input_path, 30.0)
                 if gen_res["status"] != "OK":
-                    results.append({"subtask": st_id, "verdict": "IE", "feedback": f"Generator: {gen_res.get('error', '')}", "time_used": 0, "memory_used": 0})
+                    _upsert_group(results, st_id, "IE", f"Generator: {gen_res.get('error', '')}")
                     group_passed = False
                     break
 
                 # Sinh Output chuẩn
                 ans_res = run_trusted(answer_bin, input_path, expected_path, problem.get("time_limit", 1.0))
                 if ans_res["status"] != "OK":
-                    results.append({"subtask": st_id, "verdict": "IE", "feedback": f"Answer: {ans_res.get('error', '')}", "time_used": 0, "memory_used": 0})
+                    _upsert_group(results, st_id, "IE", f"Answer: {ans_res.get('error', '')}")
                     group_passed = False
                     break
 
@@ -140,7 +176,7 @@ async def process_submission(
                     "verdict": verdict,
                     "feedback": feedback,
                 }
-                results.append(tc_res)
+                _push_testcase(results, st_id, verdict, tc_res["time_used"], tc_res["memory_used"], feedback)
 
                 time_used = max(time_used, tc_res["time_used"])
                 memory_used = max(memory_used, tc_res["memory_used"])
@@ -170,7 +206,7 @@ async def process_submission(
         await push_final_result(redis, submission_id, {
             "status": "D", "score": 0, "max_score": 0,
             "time_used": 0, "memory_used": 0,
-            "results": [{"verdict": "IE", "feedback": f"Judge error: {e}", "time_used": 0, "memory_used": 0}],
+            "results": [_new_result_group(None, "IE", f"Judge error: {e}")],
             "error": str(e), "judger_name": judger_name,
         })
     finally:

@@ -46,7 +46,7 @@ export default function DiscordConfirm() {
         toast.error(res?.data?.detail || "Quick login failed.");
         navigate('/', { replace: true });
       }
-    } catch (err) {
+    } catch {
       if (!mounted.current) return;
       toast.error("A network error occurred during quick login.");
       navigate('/', { replace: true });
@@ -80,7 +80,7 @@ export default function DiscordConfirm() {
         if (action === 'quick_login') {
           handleQuickLogin();
         }
-      } catch (err) {
+      } catch {
         // FIX 2: Catch network errors so the screen doesn't get stuck
         if (!mounted.current) return;
         toast.error("Failed to verify confirmation link. Please try again.");
@@ -138,8 +138,8 @@ export default function DiscordConfirm() {
 
     setLoading(true);
 
-    let endpoint = '';
-    let payload = { secret };
+    let endpoint;
+    let payload;
 
     if (action === 'create_account') {
       endpoint = '/confirm/create-account';
@@ -182,7 +182,7 @@ export default function DiscordConfirm() {
           }
         }
       }
-    } catch (err) {
+    } catch {
       if (!mounted.current) return;
       setError("A network error occurred. Please try again.");
     } finally {

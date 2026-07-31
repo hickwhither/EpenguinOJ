@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { get_request } from '../Request';
 import { formatDateWithLink } from '../dateUtils';
+import SubmissionModal from '../components/submission/SubmissionModal';
 
 const STATUS_LABEL = { QW: 'Queued', C: 'Compiling', P: 'Processing', D: 'Done' };
 
@@ -31,7 +32,7 @@ const fetchSubmissions = async ({ is_best, problem_id, contest_id, username, pag
   };
 };
 
-function SubmissionRow({ sub, page, pageSize }) {
+function SubmissionRow({ sub, onView }) {
   const [live, setLive] = useState(null);
   const isActive = sub.status === 'C' || sub.status === 'P';
 
@@ -84,10 +85,7 @@ function SubmissionRow({ sub, page, pageSize }) {
         </div>
       </div>
       <div className="is-hidden-mobile mr-4 is-size-7">
-        <span className="has-text-grey-light">
-          <a href={`/submission/${sub.id}`} className="has-text-link">view</a> &bull;
-          <a href={`/submission/${sub.id}/source`} className="has-text-link">source</a>
-        </span>
+        <button type="button" className="button is-small is-ghost has-text-link" onClick={() => onView(sub.id)}>view</button>
       </div>
       <div className="has-text-right" style={{ minWidth: '90px' }}>
         <div className="is-size-7 has-text-weight-semibold">
@@ -110,6 +108,7 @@ export default function SubmissionList({
   const [isBest, setIsBest] = useState(propIsBest ?? false);
   const [usernameFilter, setUsernameFilter] = useState('');
   const [debouncedUsername, setDebouncedUsername] = useState('');
+  const [viewSubmissionId, setViewSubmissionId] = useState(null);
   const { problem_id: paramProblemId, contest_id: paramContestId } = useParams();
   const { current_user } = useAuth();
 
@@ -132,9 +131,13 @@ export default function SubmissionList({
 
   const list = data?.items || [];
   const totalPages = data?.pages || 1;
-  const pageSize = data?.size || 50;
 
-  useEffect(() => { if (isOpen) setPage(1); }, [isOpen, debouncedUsername]);
+  const filterKey = `${isOpen ? 'open' : 'closed'}:${debouncedUsername}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    if (isOpen) setPage(1);
+  }
 
   const handleToggleBest = (value) => {
     setIsBest(value);
@@ -203,13 +206,17 @@ export default function SubmissionList({
           <div className="has-text-centered has-text-grey py-6">No submissions.</div>
         ) : (
           <div className="submission-list">
-            {list.map((sub, index) => (
-              <SubmissionRow key={sub.id} sub={sub} page={page} pageSize={pageSize} />
+            {list.map((sub) => (
+              <SubmissionRow key={sub.id} sub={sub} onView={setViewSubmissionId} />
             ))}
           </div>
         )}
       </div>
     </>
+  );
+
+  const viewModal = viewSubmissionId && (
+    <SubmissionModal submissionId={viewSubmissionId} onClose={() => setViewSubmissionId(null)} />
   );
 
   if (isOpen !== undefined) {
@@ -225,6 +232,7 @@ export default function SubmissionList({
           </div>
         </div>
         <button className="modal-close is-large" aria-label="close" onClick={onClose}></button>
+        {viewModal}
       </div>
     );
   }
@@ -233,6 +241,7 @@ export default function SubmissionList({
     <div className="section p-4">
       <div className="container">
         {content}
+        {viewModal}
         <style>{`
           .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           .border-bottom:last-child { border-bottom: none !important; }

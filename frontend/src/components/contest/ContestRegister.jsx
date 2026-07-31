@@ -7,7 +7,7 @@ export default function RegisterContestButton({ contest, onSuccess }) {
   const [password, setPassword] = useState('');
   const [registering, setRegistering] = useState(false);
 
-  const now = Math.floor(Date.now() / 1000);
+  const [now] = useState(() => Math.floor(Date.now() / 1000));
   const regStart = contest?.registration_start;
   const regEnd = contest?.registration_end;
 
