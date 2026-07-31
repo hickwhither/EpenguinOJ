@@ -20,6 +20,7 @@ import ContestLayout from './pages/ContestLayout'
 import ContestInfo from './pages/ContestLayouts/ContestInfo'
 import ContestRanking from './pages/ContestLayouts/ContestRanking'
 import SubmissionList from './pages/SubmissionList'
+import SubmissionDetail from './pages/SubmissionDetail'
 import ProfilePage from './pages/ProfilePage'
 import ProfileSettings from './pages/ProfileSettings'
 
@@ -36,9 +37,11 @@ export default function App() {
 
           <Route path="/problems" element={<RequireAuth><ProblemList /></RequireAuth>} />
           <Route path="/p/:problem_id" element={<RequireAuth><ProblemDisplay /></RequireAuth>} />
+          <Route path="/p/:problem_id/s" element={<RequireAuth><SubmissionList /></RequireAuth>} />
+          <Route path="/submission" element={<RequireAuth><SubmissionList /></RequireAuth>} />
+          <Route path="/submission/:id" element={<RequireAuth><SubmissionDetail /></RequireAuth>} />
           <Route path="/c/:contest_id" element={<RequireAuth><ContestLayout /></RequireAuth>}>
             <Route path="" element={<ContestInfo />} />
-            <Route path="p" element={<ProblemList />} />
             <Route path="p/:problem_id" element={<RequireAuth><ProblemDisplay /></RequireAuth>} />
             <Route path="s" element={<SubmissionList />} />
             <Route path="s/:problem_id" element={<SubmissionList />} />

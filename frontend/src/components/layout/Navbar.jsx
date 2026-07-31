@@ -29,6 +29,7 @@ export default function Navbar() {
         <div className="navbar-end">
           <NavLink className="navbar-item" to="">Home</NavLink>
           <NavLink className="navbar-item" to="/problems">Problems</NavLink>
+          <NavLink className="navbar-item" to="/submission">Submissions</NavLink>
           <NavLink className="navbar-item" to="/contests">Contests</NavLink>
           <NavLink className="navbar-item" to="/about">About</NavLink>
         </div>

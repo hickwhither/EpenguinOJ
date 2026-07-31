@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { get_request } from '../../Request';
-import { formatDateWithLink } from '../../dateUtils';
+import { get_request } from '../Request';
+import { formatDateWithLink } from '../dateUtils';
+import { useAuth } from '../context/AuthContext';
+import { useSubmissionStream } from '../components/submission/submissionStream';
 
 const STATUS_LABEL = { QW: 'Queued', C: 'Compiling', P: 'Processing', D: 'Done' };
 
@@ -29,41 +32,39 @@ const statusColor = (score, status) => {
   return 'is-light';
 };
 
-export default function SubmissionModal({ submissionId, onClose }) {
+export default function SubmissionDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('result');
-  const [live, setLive] = useState(null);
+  const { current_user } = useAuth();
+  const { subs } = useSubmissionStream();
+  const live = subs[id];
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['submission', submissionId],
-    queryFn: () => get_request(`/submission/${submissionId}`).then((res) => res.data),
-    enabled: !!submissionId,
+    queryKey: ['submission', id],
+    queryFn: () => get_request(`/submission/${id}`).then((res) => res.data),
+    enabled: !!id,
     staleTime: 1000 * 60,
   });
 
   const status = live?.status ?? data?.status;
-  const isActive = status === 'C' || status === 'P';
+  const isOwner = !!data && data.user?.id === current_user?.id;
 
-  useEffect(() => {
-    if (!submissionId || !isActive) return;
-    const evtSource = new EventSource(`/api/submission/${submissionId}/stream`);
-    evtSource.onmessage = (e) => {
-      const d = JSON.parse(e.data);
-      setLive(d);
-      if (d.status === 'D') evtSource.close();
-    };
-    evtSource.onerror = () => evtSource.close();
-    return () => evtSource.close();
-  }, [submissionId, isActive]);
-
-  if (!submissionId) return null;
+  if (!id) return null;
 
   const sub = data ? { ...data, ...live } : null;
   const date = sub?.date_created ? formatDateWithLink(sub.date_created) : null;
 
   return (
-    <div className="modal is-active">
-      <div className="modal-background" onClick={onClose}></div>
-      <div className="modal-content" style={{ width: '85%', maxWidth: '1000px' }}>
+    <div className="section p-4">
+      <div className="container">
+        <div className="mb-3">
+          <button type="button" className="button is-small is-ghost has-text-link" onClick={() => navigate(-1)}>
+            <span className="icon is-small"><i className="fa-solid fa-arrow-left" /></span>
+            <span>Back</span>
+          </button>
+        </div>
+
         <div className="box">
           {isLoading && !data && (
             <div className="has-text-centered py-6">
@@ -190,7 +191,9 @@ export default function SubmissionModal({ submissionId, onClose }) {
                     <span className="is-size-7 has-text-grey">Source code</span>
                   </div>
                   <pre style={{ maxHeight: '60vh', overflow: 'auto', fontSize: '0.85rem' }}>
-                    {sub.source || 'No source code available.'}
+                    {isOwner
+                      ? sub.source || 'No source code available.'
+                      : 'Source code is only visible to the submission owner.'}
                   </pre>
                 </>
               )}
@@ -198,7 +201,6 @@ export default function SubmissionModal({ submissionId, onClose }) {
           )}
         </div>
       </div>
-      <button className="modal-close is-large" aria-label="close" onClick={onClose}></button>
     </div>
   );
 }

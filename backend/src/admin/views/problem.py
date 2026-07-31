@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from fastadmin import (
     SqlAlchemyModelAdmin, SqlAlchemyInlineModelAdmin, WidgetType,
@@ -10,8 +9,7 @@ from sqlmodel import select
 from src.database import async_session_maker
 from src.models import Submission, Subtask, Problem, Hack
 from ..config import redis_client
-from src.redis_sync import sync_problem_to_redis
-from .judging import SubmissionAdmin
+from .judging import SubmissionAdmin, rejudge_submissions
 
 
 @register(Subtask, sqlalchemy_sessionmaker=async_session_maker)
@@ -68,20 +66,23 @@ class ProblemAdmin(SqlAlchemyModelAdmin):
 
     actions = ("sync_to_redis", "rejudge_all_submission")
 
-    @action(description="Rejudge all submissions")
-    async def rejudge_all_submission(self, request, id: int):
+    @action(description="Rejudge all submissions of selected problems")
+    async def rejudge_all_submission(self, ids: list[int]):
+        if not ids:
+            return ActionResponseSchema(
+                type=ActionResponseType.MESSAGE, data="No problems selected"
+            )
         async with async_session_maker() as session:
-            statement = select(Submission).where(Submission.problem_id == id)
+            statement = select(Submission).where(Submission.problem_id.in_(ids))
             submissions = (await session.scalars(statement)).all()
-            for sub in submissions:
-                payload = {
-                    "submission_id": sub.id,
-                    "problem_id": sub.problem_id,
-                    "language": sub.language,
-                    "source": sub.source,
-                }
-                await sync_problem_to_redis(redis_client, id)
-                await redis_client.rpush("submission", json.dumps(payload))
-        return ActionResponseSchema(type=ActionResponseType.MESSAGE, data=f"Queued {len(submissions)} submission(s) from {id}")
+            if not submissions:
+                return ActionResponseSchema(
+                    type=ActionResponseType.MESSAGE, data="No submissions found"
+                )
+            count = await rejudge_submissions(session, redis_client, submissions)
+        return ActionResponseSchema(
+            type=ActionResponseType.MESSAGE,
+            data=f"Queued {count} submission(s) across {len(ids)} problem(s)",
+        )
 
 

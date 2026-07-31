@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { get_request } from '../Request';
 
 import { useAuth } from '../context/AuthContext';
 import { HandleDisplay } from '../components/HandleDisplay';
 import SubmitModal from '../components/problem/SubmitModal';
-import SubmissionList from './SubmissionList';
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -26,11 +25,11 @@ const fetchProblem = async (problem_id, contest_id) => {
 
 export default function ProblemDisplay() {
   const { problem_id, contest_id } = useParams();
+  const navigate = useNavigate();
   const { loginRequired } = useAuth();
   
   // Modals State
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
-  const [isSubmissionListOpen, setIsSubmissionListOpen] = useState(false);
 
   const { data: p = {}, isLoading, error } = useQuery({
     queryKey: ['problem', problem_id, contest_id],
@@ -72,7 +71,9 @@ export default function ProblemDisplay() {
             Submit
           </button>
           <button 
-            onClick={() => setIsSubmissionListOpen(true)} 
+            onClick={() => loginRequired(() => navigate(contest_id
+              ? `/c/${contest_id}/s/${problem_id}`
+              : `/p/${problem_id}/s`))} 
             className="button is-info" 
             title='Submissions'
           >
@@ -125,13 +126,6 @@ export default function ProblemDisplay() {
         onClose={() => setIsSubmitModalOpen(false)}
         problem_id={p.id || problem_id}
         problem_name={p.name}
-        contest_id={contest_id}
-      />
-      
-      <SubmissionList 
-        isOpen={isSubmissionListOpen}
-        onClose={() => setIsSubmissionListOpen(false)}
-        problem_id={p.id || problem_id}
         contest_id={contest_id}
       />
     </div>

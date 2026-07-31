@@ -1,16 +1,18 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useState } from 'react';
 const defaultAvatar = "https://bulma.io/assets/images/placeholders/128x128.png";
 
 export default function AuthButton() {
     const { current_user, loading, logout, setIsLoginModalActive } = useAuth();
+    const [profileActive, setProfileActive] = useState(false);
 
     if (loading) return <></>;
 
     if (current_user) return (
-        <div className="dropdown is-hoverable is-right">
+        <div className={`dropdown is-right ${profileActive ? "is-active": ""}`}>
             <div className="dropdown-trigger">
-                <button className="button is-ghost" aria-haspopup="true" aria-controls="dropdown-menu">
+                <button className="button is-ghost" onClick={() => setProfileActive(!profileActive)} aria-haspopup="true" aria-controls="dropdown-menu">
                     <figure className="image media-left">
                         <img 
                             className="is-rounded" 

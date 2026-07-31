@@ -3,7 +3,7 @@ import React from 'react';
 export const HandleDisplay = ({ user }) => {
   const getRankTagClass = (rank) => {
     // if (!rank) return '';
-    switch (rank.toLowerCase()) {
+    switch (rank?.toLowerCase()) {
       case 'admin':
         return 'has-text-danger has-text-dark';    // Đỏ đậm quyền lực
       case 'mod':

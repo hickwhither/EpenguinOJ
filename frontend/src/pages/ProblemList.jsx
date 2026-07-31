@@ -35,11 +35,12 @@ const fetchProblems = async ({ page, search, contest_id }) => {
   return res?.data || { items: [], pages: 1, total: 0, page: 1, size: 10 };
 };
 
-export default function ProblemList() {
+export default function ProblemList({ contest_id: propContestId }) {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const {contest_id} = useParams();
+  const { contest_id: paramContestId } = useParams();
+  const contest_id = propContestId || paramContestId;
 
   // Debounce search input by 500ms (0.5s)
   const debouncedSearch = useDebounce(search, 500);

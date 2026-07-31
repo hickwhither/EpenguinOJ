@@ -49,7 +49,8 @@ export default function ContestLayout() {
   const progressPercent = getProgressValue();
 
   const isTabActive = (path) => {
-    if (path === 'info') return location.pathname === `/c/${contest_id}`;
+    if (path === 'ranking') return location.pathname === `/c/${contest_id}/ranking`;
+    if (path === 'submissions') return location.pathname.startsWith(`/c/${contest_id}/s`)
     return location.pathname.startsWith(`/c/${contest_id}/${path}`);
   };
 
@@ -74,12 +75,6 @@ export default function ContestLayout() {
             <a onClick={() => navigate(`/c/${contest_id}`)}>
               <span className="icon is-small"><i className="fa-solid fa-circle-info" /></span>
               Info
-            </a>
-          </li>
-          <li className={isTabActive('p') ? 'is-active' : ''}>
-            <a onClick={() => navigate(`/c/${contest_id}/p`)}>
-              <span className="icon is-small"><i className="fa-solid fa-grip" /></span>
-              Problems
             </a>
           </li>
           <li className={isTabActive('ranking') ? 'is-active' : ''}>

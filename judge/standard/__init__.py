@@ -141,7 +141,10 @@ async def process_submission(
                 continue
 
             group_passed = True
-            for seed in subtask.get("seeds", []):
+            seeds = subtask.get("seeds", [])
+            if isinstance(seeds, str):
+                seeds = json.loads(seeds)
+            for seed in seeds:
                 # Sinh Input
                 gen_res = run_generator(gen_bin, seed, input_path, 30.0)
                 if gen_res["status"] != "OK":

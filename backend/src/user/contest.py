@@ -9,12 +9,10 @@ from sqlmodel import select
 
 from src.database import SessionDep
 from src.dependencies.contest import (
-    ensure_can_view_problem_contest,
-    ensure_contest_running,
+    ensure_can_view_contest_content,
     ensure_registration_running,
     get_contest_or_404,
     is_contest_participant,
-    is_contest_running,
 )
 from src.dependencies.user import verify_auth
 from src.models import *
@@ -151,8 +149,7 @@ async def get_contest_ranking(
     current_user: User = Depends(verify_auth),
 ):
     contest = await get_contest_or_404(session, id)
-    ensure_contest_running(contest)
-    await ensure_can_view_problem_contest(contest, current_user, session)
+    await ensure_can_view_contest_content(contest, current_user, session)
 
     # Trong Async, truy cập relationship lazy load cần lưu ý.
     # Nếu trong Model đã khai báo relationship(lazy="selectin"), gọi trực tiếp OK:

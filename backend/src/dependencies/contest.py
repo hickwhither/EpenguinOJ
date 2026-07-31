@@ -50,3 +50,16 @@ async def ensure_can_view_problem_contest(contest: Contest, user: User, session:
     if await is_contest_participant(session, contest, user):
         return
     raise HTTPException(403, "contest.not_registered")
+
+
+async def ensure_can_view_contest_content(contest: Contest, user: User, session: SessionDep) -> None:
+    """Gate for viewing contest content (problems, submissions, ranking).
+
+    Hidden before the contest starts, registered-only while it is running,
+    and public after it ends.
+    """
+    now = utcnow()
+    if now < contest.start_time:
+        raise HTTPException(403, "contest.upcoming")
+    if now <= contest.end_time and not await is_contest_participant(session, contest, user):
+        raise HTTPException(403, "contest.not_registered")

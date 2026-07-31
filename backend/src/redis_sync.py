@@ -39,12 +39,16 @@ async def sync_subtask_to_redis(redis_client, subtask_id: int):
             await sync_hack_to_redis(redis_client, hack.id)
             hack_ids.append(hack.id)
 
+        seeds = subtask.seeds
+        if isinstance(seeds, str):
+            seeds = json.loads(seeds)
+
         subtask_payload = {
             "id": subtask.id,
             "points": subtask.points,
             "generator": subtask.generator,
             "validator": subtask.validator,
-            "seeds": subtask.seeds,
+            "seeds": seeds,
             "hacks": hack_ids,
         }
 
