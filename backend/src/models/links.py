@@ -1,6 +1,6 @@
 from typing import *
 from sqlmodel import *
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, JSON
 from src.utils import utcnow
 
 if TYPE_CHECKING:
@@ -20,6 +20,8 @@ class ContestRegistrationBase(SQLModel):
     registered_at: int = Field(default_factory=utcnow, sa_type=BigInteger)
     total_score: float = Field(default=0.0)
     penalty: float = Field(default=0.0)
+    problem_scores: dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON))
+    last_improve_time: Optional[int] = Field(default=None, sa_type=BigInteger)
     old_rating: Optional[int] = Field()
     new_rating: Optional[int] = Field()
 

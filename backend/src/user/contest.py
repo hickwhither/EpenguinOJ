@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import apaginate
 from pydantic import BaseModel
-from sqlmodel import select
+from sqlalchemy.orm import selectinload
+from sqlmodel import SQLModel, func, select
 
 from src.database import SessionDep
 from src.dependencies.contest import (
@@ -16,6 +17,7 @@ from src.dependencies.contest import (
 )
 from src.dependencies.user import verify_auth
 from src.models import *
+from src.services.ranking import penalty_minutes
 
 # CONFIGURATIONS
 router = APIRouter(
@@ -34,13 +36,41 @@ class ContestView(ContestView):
     is_registered: bool = False
 
 
-class SimpleContestRegistration(ContestRegistrationBase):
-    user: "UserPublic"
-    contest: "ContestPublic"
-
-
 class ContestRegisterRequest(BaseModel):
     password: Optional[str] = None
+
+
+class RankingProblem(SQLModel):
+    id: int
+    name: str
+    display_order: int
+
+
+class RankingUser(SQLModel):
+    username: str
+    nickname: Optional[str] = None
+    avatar_url: Optional[str] = None
+    rank: Optional[str] = None
+
+
+class ProblemResult(SQLModel):
+    score: float
+    max_score: float
+    accepted: bool
+
+
+class RankingEntry(SQLModel):
+    rank: int
+    user: "RankingUser"
+    total_score: float
+    penalty: float
+    problem_results: dict[str, ProblemResult]
+
+
+class ContestRankingView(SQLModel):
+    contest_id: int
+    problems: list[RankingProblem]
+    ranking: list[RankingEntry]
 
 
 # FUNCTIONS
@@ -142,7 +172,7 @@ async def register_contest(
     return {"message": "Registered successfully"}
 
 
-@router.get("/{id}/ranking", response_model=list[SimpleContestRegistration])
+@router.get("/{id}/ranking", response_model=ContestRankingView)
 async def get_contest_ranking(
     session: SessionDep,
     id: str,
@@ -151,8 +181,74 @@ async def get_contest_ranking(
     contest = await get_contest_or_404(session, id)
     await ensure_can_view_contest_content(contest, current_user, session)
 
-    # Trong Async, truy cập relationship lazy load cần lưu ý.
-    # Nếu trong Model đã khai báo relationship(lazy="selectin"), gọi trực tiếp OK:
-    # AI bao vay chu sqlmodel co dau hehe
-    return contest.registrations
+    problems_stmt = (
+        select(Problem, ContestTask.display_order)
+        .join(ContestTask, ContestTask.problem_id == Problem.id)
+        .where(ContestTask.contest_id == contest.id)
+        .order_by(ContestTask.display_order.asc(), Problem.id.asc())
+    )
+    problem_rows = (await session.exec(problems_stmt)).all()
+    problems = [
+        RankingProblem(id=p.id, name=p.name, display_order=order)
+        for p, order in problem_rows
+    ]
+
+    max_scores_stmt = (
+        select(Submission.problem_id, func.max(Submission.max_score))
+        .where(
+            Submission.contest_id == contest.id,
+            Submission.status == "D",
+        )
+        .group_by(Submission.problem_id)
+    )
+    max_score_by_problem = {
+        pid: (ms or 0.0) for pid, ms in (await session.exec(max_scores_stmt)).all()
+    }
+
+    regs_stmt = (
+        select(ContestRegistration)
+        .where(ContestRegistration.contest_id == contest.id)
+        .options(selectinload(ContestRegistration.user))
+    )
+    regs = (await session.exec(regs_stmt)).all()
+
+    raw = []
+    for reg in regs:
+        user = reg.user
+        problem_results = {}
+        for p in problems:
+            score = float(reg.problem_scores.get(str(p.id), 0.0))
+            max_score = max_score_by_problem.get(p.id, 0.0)
+            problem_results[str(p.id)] = ProblemResult(
+                score=score,
+                max_score=max_score,
+                accepted=bool(max_score) and score >= max_score,
+            )
+        username = user.username if user else ""
+        raw.append(
+            (
+                reg.total_score,
+                penalty_minutes(reg, contest),
+                username,
+                RankingEntry(
+                    rank=0,
+                    user=RankingUser(
+                        username=username,
+                        nickname=user.nickname if user else None,
+                        avatar_url=user.avatar_url if user else None,
+                        rank=user.rank if user else None,
+                    ),
+                    total_score=reg.total_score,
+                    penalty=penalty_minutes(reg, contest),
+                    problem_results=problem_results,
+                ),
+            )
+        )
+
+    raw.sort(key=lambda item: (-item[0], item[1], item[2].lower()))
+    ranking = [entry for _, _, _, entry in raw]
+    for i, entry in enumerate(ranking, start=1):
+        entry.rank = i
+
+    return ContestRankingView(contest_id=contest.id, problems=problems, ranking=ranking)
 

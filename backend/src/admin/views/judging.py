@@ -1,4 +1,7 @@
+import asyncio
 import json
+import time
+
 from fastadmin import (
     SqlAlchemyModelAdmin, SqlAlchemyInlineModelAdmin, WidgetType,
     ActionResponseSchema, ActionResponseType,
@@ -7,9 +10,35 @@ from fastadmin import (
 from sqlmodel import select
 from src.database import async_session_maker
 from src.models import Submission, UserHack, SUBMISSION_STATUS
+from src.services.ranking import recompute_registration
 from ..config import redis_client
 from src.redis_sync import sync_problem_to_redis
 from .. import TimestampAdminMixin
+
+
+async def _recompute_after_rejudge(submission_ids: list[int], pairs: list[tuple[int, int]], timeout: int = 600):
+    """Wait until every rejudged submission has been judged, then rebuild the
+    affected contest registrations from scratch (avoids double-counting the
+    5-minute penalty for rejudged submissions)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        async with async_session_maker() as session:
+            pending = (
+                await session.scalars(
+                    select(Submission.id).where(
+                        Submission.id.in_(submission_ids),
+                        Submission.judged_date.is_(None),
+                    )
+                )
+            ).all()
+        if not pending:
+            break
+        await asyncio.sleep(2)
+
+    async with async_session_maker() as session:
+        for contest_id, user_id in pairs:
+            await recompute_registration(session, contest_id, user_id)
+        await session.commit()
 
 
 async def rejudge_submissions(session, redis, submissions) -> int:
@@ -47,6 +76,12 @@ async def rejudge_submissions(session, redis, submissions) -> int:
         sub.judged_date = None
         session.add(sub)
     await session.commit()
+
+    pairs = list({(sub.contest_id, sub.user_id) for sub in submissions if sub.contest_id})
+    if pairs:
+        asyncio.get_running_loop().create_task(
+            _recompute_after_rejudge([sub.id for sub in submissions], pairs)
+        )
 
     return len(submissions)
 

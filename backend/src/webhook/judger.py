@@ -9,6 +9,7 @@ from pathlib import Path
 
 from src.database import SessionDep
 from src.models import ContestRegistration, Problem, Submission
+from src.services.ranking import apply_result_to_registration
 
 # CONFIGURATIONS
 router = APIRouter(prefix="/judger", tags=["webhook.judger"])
@@ -87,8 +88,8 @@ async def report_result(session: SessionDep, submission_id: int, body: JudgeResu
             ContestRegistration.user_id == submission.user_id,
         )
         reg = (await session.scalars(stmt)).first()
-        if reg and body.score > reg.total_score:
-            reg.total_score = body.score
+        if reg:
+            apply_result_to_registration(reg, submission)
             session.add(reg)
 
     await session.commit()

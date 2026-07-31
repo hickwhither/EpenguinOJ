@@ -15,6 +15,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .database import async_session_maker, init_db
 from .models import ContestRegistration, Problem, Submission
+from .services.ranking import apply_result_to_registration
 from .utils import utcnow
 
 
@@ -48,8 +49,8 @@ async def consume_results(redis):
                             ContestRegistration.user_id == sub.user_id,
                         )
                         reg = (await session.scalars(stmt)).first()
-                        if reg and data.get("score", 0) > reg.total_score:
-                            reg.total_score = data["score"]
+                        if reg:
+                            apply_result_to_registration(reg, sub)
                             session.add(reg)
 
                     await session.commit()
