@@ -43,7 +43,7 @@ def ensure_registration_running(contest: Contest) -> None:
 
 
 async def is_contest_participant(session: SessionDep, contest: Contest, user: User) -> bool:
-    return bool(session.get(ContestRegistration, (contest.id, user.id)))
+    return bool(await session.get(ContestRegistration, (contest.id, user.id)))
 
 
 async def ensure_can_view_problem_contest(contest: Contest, user: User, session: SessionDep) -> None:

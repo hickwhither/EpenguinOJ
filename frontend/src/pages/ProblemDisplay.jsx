@@ -26,17 +26,11 @@ const fetchProblem = async (problem_id, contest_id) => {
 
 export default function ProblemDisplay() {
   const { problem_id, contest_id } = useParams();
-  const { current_user, loginRequired } = useAuth();
+  const { loginRequired } = useAuth();
   
   // Modals State
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
-  const [submissionList, setSubmissionList] = useState({isOpen:false});
-  const openSubmissionList = (mode) => {
-    if(mode=='status') return setSubmissionList(({isOpen: true, title:'Submissions'}) );
-    if(mode=='my-submissions') return setSubmissionList(({isOpen: true, title:'My Submissions', username:current_user.username }) );
-    if(mode=='leaderboard') return setSubmissionList(({isOpen: true, title: 'Leaderboard', is_best:true }) );
-  }
-  const closeSubmissionList = () => setSubmissionList(prev => ({ ...prev, isOpen: false }));
+  const [isSubmissionListOpen, setIsSubmissionListOpen] = useState(false);
 
   const { data: p = {}, isLoading, error } = useQuery({
     queryKey: ['problem', problem_id, contest_id],
@@ -78,25 +72,11 @@ export default function ProblemDisplay() {
             Submit
           </button>
           <button 
-            onClick={() => openSubmissionList('status')} 
+            onClick={() => setIsSubmissionListOpen(true)} 
             className="button is-info" 
-            title='All submissions'
+            title='Submissions'
           >
             <i className="fa-solid fa-signal"/>
-          </button>
-          <button 
-            onClick={() => openSubmissionList('my-submissions')} 
-            className="button is-info" 
-            title='My submissions'
-          >
-            <i className="fa-solid fa-user-circle"/>
-          </button>
-          <button 
-            onClick={() => openSubmissionList('leaderboard')} 
-            className="button is-link" 
-            title='Leaderboard'
-          >
-            <i className="fa-solid fa-crown"/>
           </button>
         </div>
         
@@ -149,12 +129,10 @@ export default function ProblemDisplay() {
       />
       
       <SubmissionList 
-        isOpen={submissionList.isOpen}
-        onClose={closeSubmissionList}
-        title={submissionList.title}
+        isOpen={isSubmissionListOpen}
+        onClose={() => setIsSubmissionListOpen(false)}
         problem_id={p.id || problem_id}
         contest_id={contest_id}
-        username={current_user?.username || ""}
       />
     </div>
   );

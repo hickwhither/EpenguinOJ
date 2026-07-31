@@ -116,14 +116,8 @@ async def get_contest(
     current_user: User = Depends(verify_auth),
 ):
     contest_db = await get_contest_or_404(session, id)
-    running = is_contest_running(contest_db)
-    is_participant = await is_contest_participant(session, contest_db, current_user)
-
     contest_view = ContestView.model_validate(contest_db)
-    contest_view.is_registered = is_participant
-
-    if not running or not is_participant:
-        contest_view.problems = None
+    contest_view.is_registered = await is_contest_participant(session, contest_db, current_user)
 
     return contest_view
 

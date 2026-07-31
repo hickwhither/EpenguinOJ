@@ -6,7 +6,7 @@ export default function ContestRanking() {
 
   return (
     <>
-    <p className="has-text-grey">Bảng xếp hạng cho kỳ thi {contest.name} sẽ hiển thị tại đây.</p>
+    <p className="has-text-grey">The ranking for contest {contest.name} will be displayed here.</p>
     {/* Thêm logic/bảng xếp hạng ở đây */}
     </>
   );

@@ -20,10 +20,10 @@ export const AuthProvider = ({ children }) => {
   const login = async (form) => {
     const res = await post_request('/auth/signin', form);
     if (res.status !== 200) {
-      toast.error(res.data?.detail || 'Đăng nhập thất bại');
+      toast.error(res.data?.detail || 'Login failed');
       return false;
     }
-    toast.success('Đăng nhập thành công!');
+    toast.success('Login successful!');
     setUser(res.data);
     setIsLoginModalActive(false);
     return true;
@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     await post_request('/auth/signout');
     setUser(null);
-    toast.info('Đã đăng xuất');
+    toast.info('Logged out');
   };
 
   const loginRequired = (callback) => {

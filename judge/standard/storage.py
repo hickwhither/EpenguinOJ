@@ -2,12 +2,10 @@ import json
 
 
 async def write_live(redis, submission_id: str, data: dict) -> None:
-    """Cập nhật trạng thái chấm realtime cho UI/Client."""
     await redis.set(f"live:{submission_id}", json.dumps(data), ex=600)
 
 
 async def push_final_result(redis, submission_id: str, payload: dict) -> None:
-    """Gửi kết quả chấm hoàn chỉnh vào queue kết quả và ghi đè live status."""
     payload["submission_id"] = submission_id
     data_str = json.dumps(payload)
     
@@ -16,7 +14,6 @@ async def push_final_result(redis, submission_id: str, payload: dict) -> None:
 
 
 async def load_problem_and_subtasks(redis, problem_id: str) -> tuple[dict | None, list[dict]]:
-    """Tải thông tin bài toán và danh sách các subtask từ Redis."""
     problem_raw = await redis.get(f"problem:{problem_id}")
     if not problem_raw:
         return None, []

@@ -9,7 +9,7 @@ export default function SubmitModal({ isOpen, onClose, problem_id, problemName, 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!source.trim()) return toast.error("Vui lòng nhập mã nguồn trước khi nộp bài!");
+    if (!source.trim()) return toast.error("Please enter your source code before submitting!");
 
     setSubmitting(true);
     try {
@@ -24,10 +24,10 @@ export default function SubmitModal({ isOpen, onClose, problem_id, problemName, 
         setSource('');
         onClose();
       } else {
-        toast.error(res.data?.detail || "Có lỗi xảy ra khi nộp bài!");
+        toast.error(res.data?.detail || "An error occurred while submitting!");
       }
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Không thể kết nối đến máy chủ.");
+      toast.error(err.response?.data?.detail || "Cannot connect to the server.");
     } finally {
       setSubmitting(false);
     }
@@ -38,7 +38,7 @@ export default function SubmitModal({ isOpen, onClose, problem_id, problemName, 
       <div className="modal-background" onClick={() => !submitting && onClose()}></div>
       <div className="modal-content">
         <div className="box">
-          <h2 className="title is-4">Nộp bài: {problemName || `Bài ${problem_id}`}</h2>
+          <h2 className="title is-4">Submit: {problemName || `Problem ${problem_id}`}</h2>
           
           <form onSubmit={handleSubmit} className="is-flex is-flex-direction-column" style={{ gap: '12px' }}>
             {/* Language */}
@@ -55,11 +55,11 @@ export default function SubmitModal({ isOpen, onClose, problem_id, problemName, 
 
             {/* Source code */}
             <div>
-              <label className="label mb-1">Mã nguồn</label>
+              <label className="label mb-1">Source code</label>
               <textarea 
                 className="textarea" 
                 rows="12" 
-                placeholder="Dán code của bạn vào đây..."
+                placeholder="Paste your code here..."
                 value={source} 
                 onChange={(e) => setSource(e.target.value)} 
                 disabled={submitting}
@@ -69,9 +69,9 @@ export default function SubmitModal({ isOpen, onClose, problem_id, problemName, 
 
             {/* Button */}
             <div className="buttons is-right mt-2">
-              <button type="button" className="button" onClick={onClose} disabled={submitting}>Hủy</button>
+              <button type="button" className="button" onClick={onClose} disabled={submitting}>Cancel</button>
               <button type="submit" className={`button is-primary ${submitting ? 'is-loading' : ''}`} disabled={submitting}>
-                Nộp bài
+                Submit
               </button>
             </div>
           </form>

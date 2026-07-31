@@ -27,16 +27,16 @@ class TimestampAdminMixin:
             return value
         return super().deserialize_value(field, value)
 
-    async def save_model(self, id, payload, request=None):
+    async def save_model(self, id, payload):
         for field in self.timestamp_fields:
             if field in payload and isinstance(payload[field], str) and payload[field]:
                 dt = datetime.fromisoformat(payload[field])
                 if dt.tzinfo is None:
                     dt = dt.replace(tzinfo=_admin_tz)
                 payload[field] = int(dt.timestamp())
-        return await super().save_model(id, payload, request)
+        return await super().save_model(id, payload)
 
 
-from .views import accounts, judging, problem
+from .views import accounts, judging, problem, contest
 
 __all__ = ["admin_app", "TimestampAdminMixin"]

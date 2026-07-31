@@ -17,7 +17,7 @@ export async function request(path, options = {}) {
 
     // Rate limit
     if (res.status === 429) {
-      toast.error("429. Chậm thôi em chai");
+      toast.error("429. Slow down, buddy");
       return { data: null, status: 429 };
     }
 
@@ -28,8 +28,8 @@ export async function request(path, options = {}) {
     };
 
   } catch (error) {
-    console.error("API Error:", error);
-    toast.error("Đã xảy ra lỗi hệ thống hoặc mất kết nối mạng!");
+    console.error("API Error:", String(error));
+    toast.error("A system error occurred or the network connection was lost!");
     return {
       data: {detail: error},
       status: error.status || 500 

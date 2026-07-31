@@ -58,7 +58,7 @@ async def get_list_problem(
         contest = await get_contest_or_404(session, contest_id)
         ensure_contest_running(contest)
         await ensure_can_view_problem_contest(contest, current_user, session)
-        query = select(Problem).where(Problem.contests.any(Contest.id == contest_id))
+        query = select(Problem).join(Contest.problems).where(Contest.id == contest_id)
     else:
         query = select(Problem).where(Problem.is_public == True)
 

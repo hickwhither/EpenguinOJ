@@ -90,13 +90,13 @@ async def process_submission(
         for subtask in subtasks:
             st_points = subtask.get("points", 0)
             max_score += st_points
-            st_name = subtask.get("name", f"subtask_{subtask.get('id', '?')}")
+            st_id = subtask.get('id', '?')
 
             # Biên dịch Generator cho subtask
             gen_src = subtask.get("generator", "")
             gen_bin = os.path.join(judge_dir, f"gen_{subtask.get('id', '?')}")
             if not compile_cpp(gen_src, gen_bin, judge_dir):
-                results.append({"subtask": st_name, "verdict": "IE", "feedback": "Generator compile failed", "time_used": 0, "memory_used": 0})
+                results.append({"subtask": st_id, "verdict": "IE", "feedback": "Generator compile failed", "time_used": 0, "memory_used": 0})
                 await write_live(redis, submission_id, {
                     "status": "P", "score": total_score, "max_score": max_score,
                     "time_used": time_used, "memory_used": memory_used,
@@ -109,14 +109,14 @@ async def process_submission(
                 # Sinh Input
                 gen_res = run_generator(gen_bin, seed, input_path, 30.0)
                 if gen_res["status"] != "OK":
-                    results.append({"subtask": st_name, "verdict": "IE", "feedback": f"Generator: {gen_res.get('error', '')}", "time_used": 0, "memory_used": 0})
+                    results.append({"subtask": st_id, "verdict": "IE", "feedback": f"Generator: {gen_res.get('error', '')}", "time_used": 0, "memory_used": 0})
                     group_passed = False
                     break
 
                 # Sinh Output chuẩn
                 ans_res = run_trusted(answer_bin, input_path, expected_path, problem.get("time_limit", 1.0))
                 if ans_res["status"] != "OK":
-                    results.append({"subtask": st_name, "verdict": "IE", "feedback": f"Answer: {ans_res.get('error', '')}", "time_used": 0, "memory_used": 0})
+                    results.append({"subtask": st_id, "verdict": "IE", "feedback": f"Answer: {ans_res.get('error', '')}", "time_used": 0, "memory_used": 0})
                     group_passed = False
                     break
 
@@ -134,7 +134,7 @@ async def process_submission(
                     feedback = fb
 
                 tc_res = {
-                    "subtask": st_name,
+                    "subtask": st_id,
                     "time_used": res.get("time_used", 0),
                     "memory_used": res.get("memory_used", 0),
                     "verdict": verdict,

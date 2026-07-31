@@ -68,7 +68,7 @@ function SubmissionRow({ sub, page, pageSize }) {
       <div className="is-flex-grow-1" style={{ overflow: 'hidden' }}>
         <div className="is-flex is-align-items-center">
           <a href={`/problem/${sub.problem?.id}`} className="has-text-link has-text-weight-bold is-size-6 mr-2 truncate">
-            {sub.problem?.name || `Bài tập #${sub.problem?.id || sub.id}`}
+            {sub.problem?.name || `Problem #${sub.problem?.id || sub.id}`}
           </a>
         </div>
         <div className="is-size-7 has-text-grey mt-1 is-flex is-align-items-center is-flex-wrap-wrap">
@@ -102,18 +102,25 @@ function SubmissionRow({ sub, page, pageSize }) {
 }
 
 export default function SubmissionList({
-  isOpen, onClose, title,
+  isOpen, onClose,
   problem_id: propProblemId, contest_id: propContestId,
-  username: propUsername, is_best: propIsBest,
+  is_best: propIsBest,
 }) {
   const [page, setPage] = useState(1);
   const [isBest, setIsBest] = useState(propIsBest ?? false);
+  const [usernameFilter, setUsernameFilter] = useState('');
+  const [debouncedUsername, setDebouncedUsername] = useState('');
   const { problem_id: paramProblemId, contest_id: paramContestId } = useParams();
   const { current_user } = useAuth();
 
   const problem_id = propProblemId || paramProblemId;
   const contest_id = propContestId || paramContestId;
-  const username = propUsername || current_user?.username;
+  const username = debouncedUsername || undefined;
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedUsername(usernameFilter.trim()), 300);
+    return () => clearTimeout(t);
+  }, [usernameFilter]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['submissions', { isBest, problem_id, contest_id, username, page }],
@@ -127,7 +134,7 @@ export default function SubmissionList({
   const totalPages = data?.pages || 1;
   const pageSize = data?.size || 50;
 
-  useEffect(() => { if (isOpen) setPage(1); }, [isOpen]);
+  useEffect(() => { if (isOpen) setPage(1); }, [isOpen, debouncedUsername]);
 
   const handleToggleBest = (value) => {
     setIsBest(value);
@@ -140,9 +147,9 @@ export default function SubmissionList({
         <div className="level-left">
           <div className="buttons has-addons">
             <button className={`button is-small ${!isBest ? 'is-link is-selected' : ''}`}
-              onClick={() => handleToggleBest(false)}>Tất cả bài nộp</button>
+              onClick={() => handleToggleBest(false)}>All submissions</button>
             <button className={`button is-small ${isBest ? 'is-link is-selected' : ''}`}
-              onClick={() => handleToggleBest(true)}>Bài nộp tốt nhất</button>
+              onClick={() => handleToggleBest(true)}>Best submissions</button>
           </div>
         </div>
         <div className="level-right">
@@ -159,14 +166,41 @@ export default function SubmissionList({
         </div>
       </div>
 
+      <div className="field has-addons mb-4">
+        <div className="control has-icons-left is-expanded">
+          <input
+            className="input is-small"
+            type="text"
+            placeholder="Filter by username"
+            value={usernameFilter}
+            onChange={(e) => setUsernameFilter(e.target.value)}
+          />
+          <span className="icon is-small is-left">
+            <i className="fa-solid fa-user"></i>
+          </span>
+        </div>
+        <div className="control">
+          <button className="button is-small" onClick={() => setUsernameFilter(current_user?.username || '')}>
+            Only me
+          </button>
+        </div>
+        {usernameFilter && (
+          <div className="control">
+            <button className="button is-small" onClick={() => setUsernameFilter('')} aria-label="Clear username filter">
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="box p-0" style={{ overflow: 'hidden' }}>
         {isLoading ? (
           <div className="has-text-centered py-6">
             <span className="icon is-large"><i className="fas fa-spinner fa-pulse"></i></span>
-            <p className="has-text-grey mt-2">Đang tải bài nộp...</p>
+            <p className="has-text-grey mt-2">Loading submissions...</p>
           </div>
         ) : list.length === 0 ? (
-          <div className="has-text-centered has-text-grey py-6">Không có bài nộp nào.</div>
+          <div className="has-text-centered has-text-grey py-6">No submissions.</div>
         ) : (
           <div className="submission-list">
             {list.map((sub, index) => (
@@ -185,8 +219,7 @@ export default function SubmissionList({
         <div className="modal-content" style={{ width: '85%', maxWidth: '1000px' }}>
           <div className="box">
             <div className="is-flex is-justify-content-space-between is-align-items-center mb-4">
-              <h2 className="title is-4 mb-0">{title}</h2>
-              {data?.total > 0 && <span className="tag is-info is-light">Tổng cộng: {data.total} bài nộp</span>}
+              {data?.total > 0 && <span className="tag is-info is-light">Total: {data.total} submissions</span>}
             </div>
             {content}
           </div>

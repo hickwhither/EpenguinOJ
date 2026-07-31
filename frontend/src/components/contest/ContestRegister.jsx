@@ -46,7 +46,7 @@ export default function RegisterContestButton({ contest, onSuccess }) {
       const res = await post_request(`/contest/${contest.id}/register`, { password });
 
       if (res?.status === 200 || res?.data?.success) {
-        toast.success('Đăng ký contest thành công!');
+        toast.success('Contest registration successful!');
         setIsOpen(false);
         setPassword('');
         if (onSuccess) onSuccess();
@@ -54,7 +54,7 @@ export default function RegisterContestButton({ contest, onSuccess }) {
         toast.error(res?.data?.detail || res?.data?.message || 'Cannot register this contest');
       }
     } catch (error) {
-      toast.error('Có lỗi xảy ra khi đăng ký!');
+      toast.error('An error occurred during registration!');
       console.error(error);
     } finally {
       setRegistering(false);
@@ -68,7 +68,7 @@ export default function RegisterContestButton({ contest, onSuccess }) {
         className="button is-primary is-fullwidth"
         onClick={() => setIsOpen(true)}
       >
-        Đăng ký ngay
+        Register now
       </button>
 
       {/* Bulma Modal Popup */}
@@ -97,7 +97,7 @@ export default function RegisterContestButton({ contest, onSuccess }) {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Bỏ trống nếu không có"
+                    placeholder="Leave blank if none"
                     disabled={registering}
                     autoFocus
                   />
@@ -112,10 +112,10 @@ export default function RegisterContestButton({ contest, onSuccess }) {
                 onClick={() => setIsOpen(false)}
                 disabled={registering}
               >
-                Hủy
+                Cancel
               </button>
               <button type="submit" className={`button is-primary ${registering ? 'is-loading' : ''}`} disabled={registering}>
-                Confirm đăng ký
+                Confirm registration
               </button>
             </footer>
           </form>

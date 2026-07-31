@@ -1,5 +1,6 @@
 from typing import *
 from sqlmodel import *
+from sqlalchemy import BigInteger
 
 from .links import ContestTask, ContestRegistration
 
@@ -12,10 +13,10 @@ if TYPE_CHECKING:
 class ContestPublic(SQLModel):
     id: Optional[int] = Field(primary_key=True)
     name: Optional[str] = Field(index=True)
-    registration_start: Optional[int] = Field(default=None, index=True)
-    registration_end: Optional[int] = Field(default=None, index=True)
-    start_time: int = Field(index=True)
-    end_time: int = Field(index=True)
+    registration_start: Optional[int] = Field(default=None, index=True, sa_type=BigInteger)
+    registration_end: Optional[int] = Field(default=None, index=True, sa_type=BigInteger)
+    start_time: int = Field(index=True, sa_type=BigInteger)
+    end_time: int = Field(index=True, sa_type=BigInteger)
 
 
 class ContestView(ContestPublic):

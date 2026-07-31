@@ -1,6 +1,6 @@
 from typing import *
 from sqlmodel import *
-from sqlalchemy import JSON
+from sqlalchemy import JSON, BigInteger
 from src.utils import utcnow
 import random
 
@@ -50,8 +50,8 @@ class User(UserView, table=True):
     permissions: list[str] = Field(default_factory=list, sa_column=Column(JSON))
 
     # Timestamps
-    last_login: Optional[int] = Field(default=None, index=True)
-    date_joined: int = Field(default_factory=utcnow, index=True)
+    last_login: Optional[int] = Field(default=None, index=True, sa_type=BigInteger)
+    date_joined: int = Field(default_factory=utcnow, index=True, sa_type=BigInteger)
 
     # Relationships
     registrations: list[ContestRegistration] = Relationship(back_populates="user", cascade_delete=True)

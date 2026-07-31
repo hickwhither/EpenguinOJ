@@ -9,15 +9,15 @@ export default function RequireAuth({ children }) {
   }, [current_user, loading, setIsLoginModalActive]);
 
   if (loading) {
-    return <div className="box has-text-centered">Đang kiểm tra đăng nhập...</div>;
+    return <div className="box has-text-centered">Checking login status...</div>;
   }
 
   if (!current_user) {
     return (
       <div className="box has-text-centered">
-        <p className="title is-5">Vui lòng đăng nhập để xem nội dung này.</p>
+        <p className="title is-5">Please log in to view this content.</p>
         <button className="button is-primary" onClick={() => setIsLoginModalActive(true)}>
-          Đăng nhập
+          Sign in
         </button>
       </div>
     );

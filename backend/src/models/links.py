@@ -1,5 +1,6 @@
 from typing import *
 from sqlmodel import *
+from sqlalchemy import BigInteger
 from src.utils import utcnow
 
 if TYPE_CHECKING:
@@ -16,7 +17,7 @@ class ContestTask(SQLModel, table=True):
 
 
 class ContestRegistrationBase(SQLModel):
-    registered_at: int = Field(default_factory=utcnow)
+    registered_at: int = Field(default_factory=utcnow, sa_type=BigInteger)
     total_score: float = Field(default=0.0)
     penalty: float = Field(default=0.0)
     old_rating: Optional[int] = Field()
