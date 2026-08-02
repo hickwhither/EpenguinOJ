@@ -31,8 +31,7 @@ const calculateDuration = (startTime, endTime) => {
 };
 
 /* --- API CALLS --- */
-const fetchOngoing = async () => (await get_request('/contest/ongoing'))?.data || [];
-const fetchUpcoming = async () => (await get_request('/contest/upcoming'))?.data || [];
+const fetchActive = async () => (await get_request('/contest/active'))?.data || [];
 const fetchEnded = async ({ page, search }) => {
   const params = new URLSearchParams({ page });
   if (search) params.append('search', search);
@@ -77,15 +76,9 @@ export default function ContestList() {
   const debouncedSearch = useDebounce(search, 500);
 
   // Queries
-  const { data: ongoingList = [], isLoading: loadingOngoing, refetch: refetchOngoing } = useQuery({
-    queryKey: ['contests', 'ongoing'],
-    queryFn: fetchOngoing,
-    staleTime: 1000 * 60,
-  });
-
-  const { data: upcomingList = [], isLoading: loadingUpcoming, refetch: refetchUpcoming } = useQuery({
-    queryKey: ['contests', 'upcoming'],
-    queryFn: fetchUpcoming,
+  const { data: activeList = [], isLoading: loadingActive, refetch: refetchActive } = useQuery({
+    queryKey: ['contests', 'active'],
+    queryFn: fetchActive,
     staleTime: 1000 * 60,
   });
 
@@ -101,8 +94,7 @@ export default function ContestList() {
 
   // Callback làm mới danh sách sau khi đăng ký thành công
   const handleRegisterSuccess = () => {
-    refetchOngoing();
-    refetchUpcoming();
+    refetchActive();
   };
 
   const handleViewDetails = (id) => navigate(`/c/${id}`);
@@ -115,42 +107,20 @@ export default function ContestList() {
     <div className="container">
       <h1 className="title">Contests</h1>
 
-      {/* ONGOING CONTESTS */}
+      {/* CURRENT OR UPCOMING CONTESTS */}
       <section className="mb-6">
-        <h2 className="title is-4 has-text-danger">Ongoing Contests</h2>
-        {loadingOngoing ? (
+        <h2 className="title is-4">Current or Upcoming Contests</h2>
+        {loadingActive ? (
           <div className="box has-text-centered">Loading...</div>
-        ) : ongoingList.length === 0 ? (
-          <div className="notification">No ongoing contests at the moment.</div>
+        ) : activeList.length === 0 ? (
+          <div className="notification">No current or upcoming contests.</div>
         ) : (
           <div className="columns is-multiline">
-            {ongoingList.map((c) => (
-              <ContestCard
-                key={c.id} 
-                contest={c}
-                type="ongoing"
-                onViewDetails={handleViewDetails}
-                onRegisterSuccess={handleRegisterSuccess}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* UPCOMING CONTESTS */}
-      <section className="mb-6">
-        <h2 className="title is-4 has-text-warning">Upcoming Contests</h2>
-        {loadingUpcoming ? (
-          <div className="box has-text-centered">Loading...</div>
-        ) : upcomingList.length === 0 ? (
-          <div className="notification">No upcoming contests scheduled.</div>
-        ) : (
-          <div className="columns is-multiline">
-            {upcomingList.map((c) => (
+            {activeList.map((c) => (
               <ContestCard
                 key={c.id}
                 contest={c}
-                type="upcoming"
+                type="active"
                 onViewDetails={handleViewDetails}
                 onRegisterSuccess={handleRegisterSuccess}
               />

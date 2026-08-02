@@ -1,4 +1,4 @@
-from src.utils import utcnow
+from src.services.timing import utcnow
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,17 +6,17 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlmodel import apaginate
 from pydantic import BaseModel
 from sqlalchemy.orm import selectinload
-from sqlmodel import SQLModel, func, select
+from sqlmodel import SQLModel, select
 
 from src.database import SessionDep
-from src.dependencies.contest import (
+from src.services.contest import (
     ensure_can_view_contest_content,
     ensure_registration_running,
     get_contest_or_404,
     is_contest_participant,
 )
-from src.dependencies.user import verify_auth
 from src.models import *
+from src.services.user import verify_auth
 from src.services.ranking import penalty_minutes
 
 # CONFIGURATIONS
@@ -34,10 +34,6 @@ class ContestPublic(ContestPublic):
 
 class ContestView(ContestView):
     is_registered: bool = False
-
-
-class ContestRegisterRequest(BaseModel):
-    password: Optional[str] = None
 
 
 class RankingProblem(SQLModel):
@@ -97,29 +93,15 @@ def transform_contest_with_is_registered(results) -> list[ContestPublic]:
 
 
 # ROUTERS
-@router.get("/ongoing", response_model=list[ContestPublic])
-async def get_ongoing_contests(
+@router.get("/active", response_model=list[ContestPublic])
+async def get_active_contests(
     session: SessionDep, current_user: User = Depends(verify_auth)
 ):
     now = utcnow()
     statement = (
         build_contest_is_registered(current_user)
-        .where(Contest.start_time <= now, Contest.end_time >= now)
+        .where(Contest.end_time >= now)
         .order_by(Contest.end_time.asc())
-    )
-    results = (await session.exec(statement)).all()
-    return transform_contest_with_is_registered(results)
-
-
-@router.get("/upcoming", response_model=list[ContestPublic])
-async def get_upcoming_contests(
-    session: SessionDep, current_user: User = Depends(verify_auth)
-):
-    now = utcnow()
-    statement = (
-        build_contest_is_registered(current_user)
-        .where(Contest.start_time > now)
-        .order_by(Contest.start_time.asc())
     )
     results = (await session.exec(statement)).all()
     return transform_contest_with_is_registered(results)
@@ -154,13 +136,13 @@ async def get_contest(
 async def register_contest(
     session: SessionDep,
     id: str,
-    payload: ContestRegisterRequest,
+    password: str|None = None,
     current_user: User = Depends(verify_auth),
 ):
     contest = await get_contest_or_404(session, id)
     ensure_registration_running(contest)
 
-    if contest.password and payload.password != contest.password:
+    if contest.password and password != contest.password:
         raise HTTPException(403, "contest.wrongpassword")
 
     if not await is_contest_participant(session, contest, current_user):
@@ -182,28 +164,15 @@ async def get_contest_ranking(
     await ensure_can_view_contest_content(contest, current_user, session)
 
     problems_stmt = (
-        select(Problem, ContestTask.display_order)
-        .join(ContestTask, ContestTask.problem_id == Problem.id)
-        .where(ContestTask.contest_id == contest.id)
-        .order_by(ContestTask.display_order.asc(), Problem.id.asc())
+        select(Problem)
+        .where(Problem.contest_id == contest.id)
+        .order_by(Problem.display_order.asc(), Problem.id.asc())
     )
     problem_rows = (await session.exec(problems_stmt)).all()
     problems = [
-        RankingProblem(id=p.id, name=p.name, display_order=order)
-        for p, order in problem_rows
+        RankingProblem(id=p.id, name=p.name, display_order=p.display_order)
+        for p in problem_rows
     ]
-
-    max_scores_stmt = (
-        select(Submission.problem_id, func.max(Submission.max_score))
-        .where(
-            Submission.contest_id == contest.id,
-            Submission.status == "D",
-        )
-        .group_by(Submission.problem_id)
-    )
-    max_score_by_problem = {
-        pid: (ms or 0.0) for pid, ms in (await session.exec(max_scores_stmt)).all()
-    }
 
     regs_stmt = (
         select(ContestRegistration)
@@ -218,11 +187,10 @@ async def get_contest_ranking(
         problem_results = {}
         for p in problems:
             score = float(reg.problem_scores.get(str(p.id), 0.0))
-            max_score = max_score_by_problem.get(p.id, 0.0)
             problem_results[str(p.id)] = ProblemResult(
                 score=score,
-                max_score=max_score,
-                accepted=bool(max_score) and score >= max_score,
+                max_score=1,
+                accepted=bool(score),
             )
         username = user.username if user else ""
         raw.append(

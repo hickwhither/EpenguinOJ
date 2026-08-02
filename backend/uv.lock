@@ -761,6 +761,7 @@ dependencies = [
     { name = "requests" },
     { name = "sqlmodel" },
     { name = "typer" },
+    { name = "websockets" },
 ]
 
 [package.metadata]
@@ -781,6 +782,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32.5" },
     { name = "sqlmodel", specifier = ">=0.0.27" },
     { name = "typer", specifier = ">=0.15.0" },
+    { name = "websockets", specifier = ">=17.0" },
 ]
 
 [[package]]

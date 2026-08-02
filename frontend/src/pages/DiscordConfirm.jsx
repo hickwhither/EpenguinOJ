@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { post_request } from '../Request';
 import { toast } from 'react-toastify';
+import { useAuth } from '../context/AuthContext';
 
 export default function DiscordConfirm() {
+  const { refreshProfile } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const mounted = useRef(true);
 
-  // FIX 1: Explicitly set mounted.current to true on mount for React 18 Strict Mode
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; };
@@ -18,7 +19,6 @@ export default function DiscordConfirm() {
   const secret = searchParams.get('secret') || '';
 
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const [isCheckingToken, setIsCheckingToken] = useState(true);
@@ -27,19 +27,19 @@ export default function DiscordConfirm() {
 
   const [formErrors, setFormErrors] = useState({
     username: '',
-    email: '',
     password: '',
   });
 
-  // Wrapped in useCallback so we can safely call it inside useEffect
   const handleQuickLogin = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await post_request('/confirm/quick-login', { secret });
+      const res = await post_request('/auth/quick-login', { token: secret });
       if (!mounted.current) return;
 
       if (res && res.status >= 200 && res.status < 300) {
+        await refreshProfile();
+        if (!mounted.current) return;
         toast.success("Login successful!");
         navigate('/', { replace: true });
       } else {
@@ -53,7 +53,7 @@ export default function DiscordConfirm() {
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, [secret, navigate]);
+  }, [secret, navigate, refreshProfile]);
 
   useEffect(() => {
     if (!action || !secret) {
@@ -65,7 +65,7 @@ export default function DiscordConfirm() {
     const validateTokenAndProceed = async () => {
       setIsCheckingToken(true);
       try {
-        const checkRes = await post_request('/confirm/check', { secret });
+        const checkRes = await post_request('/auth/check', { token: secret });
         if (!mounted.current) return;
 
         if (!checkRes || checkRes.status < 200 || checkRes.status >= 300) {
@@ -81,7 +81,6 @@ export default function DiscordConfirm() {
           handleQuickLogin();
         }
       } catch {
-        // FIX 2: Catch network errors so the screen doesn't get stuck
         if (!mounted.current) return;
         toast.error("Failed to verify confirmation link. Please try again.");
         navigate('/', { replace: true });
@@ -89,13 +88,12 @@ export default function DiscordConfirm() {
     };
 
     validateTokenAndProceed();
-    // FIX 3: Added missing dependencies
-  }, [action, secret, navigate, handleQuickLogin]); 
+  }, [action, secret, navigate, handleQuickLogin]);
 
   const validateForm = () => {
     let isValid = true;
-    const errors = { username: '', email: '', password: '' };
-    
+    const errors = { username: '', password: '' };
+
     if (action === 'create_account') {
       const usernameRegex = /^[a-zA-Z_]+$/;
       if (!username.trim()) {
@@ -103,15 +101,6 @@ export default function DiscordConfirm() {
         isValid = false;
       } else if (!usernameRegex.test(username)) {
         errors.username = 'Username can only contain letters (A-Z, a-z) and underscores (_).';
-        isValid = false;
-      }
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!email.trim()) {
-        errors.email = 'Email is required.';
-        isValid = false;
-      } else if (!emailRegex.test(email)) {
-        errors.email = 'Please enter a valid email address.';
         isValid = false;
       }
     }
@@ -142,11 +131,11 @@ export default function DiscordConfirm() {
     let payload;
 
     if (action === 'create_account') {
-      endpoint = '/confirm/create-account';
-      payload = { secret, username, email, password };
+      endpoint = '/auth/signup';
+      payload = { token: secret, username, password };
     } else if (action === 'change_password') {
-      endpoint = '/confirm/reset-password';
-      payload = { secret, password };
+      endpoint = '/auth/reset-password';
+      payload = { token: secret, new_password: password };
     } else {
       toast.error("Invalid action.");
       navigate('/', { replace: true });
@@ -158,6 +147,8 @@ export default function DiscordConfirm() {
       if (!mounted.current) return;
 
       if (res && res.status >= 200 && res.status < 300) {
+        await refreshProfile();
+        if (!mounted.current) return;
         toast.success(
           action === 'create_account'
             ? "Account created successfully!"
@@ -173,10 +164,6 @@ export default function DiscordConfirm() {
         } else {
           if (errorMsg === 'confirm.exist_username') {
             setFormErrors((prev) => ({ ...prev, username: 'Username is already taken.' }));
-          } else if (errorMsg === 'confirm.exist_email') {
-            setFormErrors((prev) => ({ ...prev, email: 'Email address is already registered.' }));
-          } else if (errorMsg === 'confirm.exist_discord_id') {
-            setError('This Discord account is already linked to another user.');
           } else {
             setError(errorMsg);
           }
@@ -239,60 +226,32 @@ export default function DiscordConfirm() {
         ) : (
           <form onSubmit={handleSubmit} noValidate>
             {action === 'create_account' && (
-              <>
-                {/* Username Input */}
-                <div className="field">
-                  <label className="label">Username</label>
-                  <div className="control has-icons-left">
-                    <input
-                      className={`input ${formErrors.username ? 'is-danger' : ''}`}
-                      type="text"
-                      placeholder="e.g. john_doe"
-                      value={username}
-                      onChange={(e) => {
-                        setUsername(e.target.value);
-                        if (formErrors.username) setFormErrors({ ...formErrors, username: '' });
-                      }}
-                      required
-                    />
-                    <span className="icon is-small is-left">
-                      <i className="fas fa-user"></i>
-                    </span>
-                  </div>
-                  {formErrors.username ? (
-                    <p className="help is-danger">{formErrors.username}</p>
-                  ) : (
-                    <p className="help is-hint">Only letters (A-Z, a-z) and underscores (_)</p>
-                  )}
+              <div className="field">
+                <label className="label">Username</label>
+                <div className="control has-icons-left">
+                  <input
+                    className={`input ${formErrors.username ? 'is-danger' : ''}`}
+                    type="text"
+                    placeholder="e.g. john_doe"
+                    value={username}
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      if (formErrors.username) setFormErrors({ ...formErrors, username: '' });
+                    }}
+                    required
+                  />
+                  <span className="icon is-small is-left">
+                    <i className="fas fa-user"></i>
+                  </span>
                 </div>
-
-                {/* Email Input */}
-                <div className="field">
-                  <label className="label">Email</label>
-                  <div className="control has-icons-left">
-                    <input
-                      className={`input ${formErrors.email ? 'is-danger' : ''}`}
-                      type="email"
-                      placeholder="example@gmail.com"
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        if (formErrors.email) setFormErrors({ ...formErrors, email: '' });
-                      }}
-                      required
-                    />
-                    <span className="icon is-small is-left">
-                      <i className="fas fa-envelope"></i>
-                    </span>
-                  </div>
-                  {formErrors.email && (
-                    <p className="help is-danger">{formErrors.email}</p>
-                  )}
-                </div>
-              </>
+                {formErrors.username ? (
+                  <p className="help is-danger">{formErrors.username}</p>
+                ) : (
+                  <p className="help is-hint">Only letters (A-Z, a-z) and underscores (_)</p>
+                )}
+              </div>
             )}
 
-            {/* Password Input */}
             {(action === 'create_account' || action === 'change_password') && (
               <div className="field">
                 <label className="label">
@@ -320,7 +279,6 @@ export default function DiscordConfirm() {
               </div>
             )}
 
-            {/* Submit Button */}
             <div className="field mt-5">
               <button
                 type="submit"

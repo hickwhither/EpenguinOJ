@@ -1,30 +1,28 @@
 from typing import *
 
-from .links import ContestTask, ContestRegistrationBase, ContestRegistration
+from .contest import ContestRegistrationPublic, ContestRegistrationOut, ContestRegistration, ContestPublic, ContestView, Contest
 from .user import UserPublic, UserView, User
-from .problem import ProblemPublic, ProblemView, Problem, Subtask, Hack, UserHack
+from .problem import ProblemPublic, ProblemView, Problem
 from .submission import SubmissionPublic, SubmissionView, Submission, SUBMISSION_STATUS, SUBMISSION_VERDICT
-from .contest import ContestPublic, ContestView, Contest
-
-class SubmissionPublic(SubmissionPublic):
-    user: "UserPublic"
-    contest: Optional["ContestPublic"]
-    problem: "ProblemPublic"
+from .hack import HackPublic, Hack
 
 
-class SubmissionView(SubmissionView):
-    user: "UserPublic"
-    contest: Optional["ContestPublic"]
-    problem: "ProblemPublic"
+class SubmissionListOut(SubmissionPublic):
+    user: UserPublic
+    problem: ProblemPublic
+    contest_registration: Optional[ContestRegistrationOut] = None
+
+
+class SubmissionDetailOut(SubmissionView):
+    user: UserPublic
+    problem: ProblemPublic
+    contest_registration: Optional[ContestRegistrationOut] = None
 
 
 __all__ = [
-    "ContestTask", "ContestRegistrationBase", "ContestRegistration",
+    "ContestRegistrationPublic", "ContestRegistrationOut", "ContestRegistration", "ContestPublic", "ContestView", "Contest",
     "UserPublic", "UserView", "User",
-    "ProblemPublic", "ProblemView", "Problem", "Subtask", "Hack", "UserHack",
-    "ContestPublic", "ContestView", "Contest",
-    "SubmissionPublic", "SubmissionView", "Submission", "SUBMISSION_STATUS", "SUBMISSION_VERDICT",
-
-    "ContestView"
+    "ProblemPublic", "ProblemView", "Problem",
+    "SubmissionPublic", "SubmissionView", "SubmissionListOut", "SubmissionDetailOut", "Submission", "SUBMISSION_STATUS", "SUBMISSION_VERDICT",
+    "HackPublic", "Hack",
 ]
-

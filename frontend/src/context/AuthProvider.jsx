@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { post_request, get_request } from '../Request';
 import { AuthContext } from './AuthContext'; // Import context từ file trên
@@ -40,10 +40,10 @@ export const AuthProvider = ({ children }) => {
     else setIsLoginModalActive(true);
   };
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     const res = await get_request('/auth/profile');
     if (res.status === 200) setUser(res.data);
-  };
+  }, []);
 
   return (
     <AuthContext.Provider

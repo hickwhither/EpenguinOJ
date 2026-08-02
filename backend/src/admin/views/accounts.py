@@ -2,8 +2,8 @@ from fastadmin import SqlAlchemyModelAdmin, WidgetType, register
 from sqlalchemy import select
 
 from src.database import async_session_maker
-from src.dependencies import hash_password, verify_password
 from src.models import User
+from src.services.user import hash_password, verify_password
 from .. import TimestampAdminMixin
 
 

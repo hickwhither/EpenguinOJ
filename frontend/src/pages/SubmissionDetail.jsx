@@ -4,31 +4,33 @@ import { useQuery } from '@tanstack/react-query';
 import { get_request } from '../Request';
 import { formatDateWithLink } from '../dateUtils';
 import { useAuth } from '../context/AuthContext';
-import { useSubmissionStream } from '../components/submission/submissionStream';
 
-const STATUS_LABEL = { QW: 'Queued', C: 'Compiling', P: 'Processing', D: 'Done' };
+const STATUS_LABEL = {
+  QW: 'Queued', C: 'Compiling', P: 'Processing',
+};
 
 const VERDICT_LABEL = {
-  AC: 'Accepted', OK: 'Accepted', PAC: 'Partially Accepted',
+  AC: 'Accepted', PAC: 'Partially Accepted',
   WA: 'Wrong Answer', TLE: 'Time Limit Exceeded', MLE: 'Memory Limit Exceeded',
   OLE: 'Output Limit Exceeded', IR: 'Invalid Return', RTE: 'Runtime Error',
   CE: 'Compile Error', IE: 'Internal Error', SC: 'Short-circuited', AB: 'Aborted',
 };
 
 const VERDICT_COLOR = {
-  AC: 'is-success', OK: 'is-success', PAC: 'is-warning',
+  AC: 'is-success',
+  PAC: 'is-warning',
   WA: 'is-danger', TLE: 'is-warning', MLE: 'is-danger', OLE: 'is-warning',
   IR: 'is-danger', RTE: 'is-danger', CE: 'is-danger', IE: 'is-danger',
   SC: 'is-grey', AB: 'is-grey',
 };
 
-const fmtTime = (ms) => (ms ? `${(ms / 1000).toFixed(2)}s` : '---');
+const fmtTime = (s) => (s !== null && s !== undefined ? `${s.toFixed(2)}s` : '---');
 const fmtMem = (kb) => (kb ? `${(kb / 1024).toFixed(2)} MB` : '---');
 
-const statusColor = (score, status) => {
-  if (status === 'D' && score > 0) return 'is-success';
-  if (status === 'D') return 'is-light';
-  if (status === 'C' || status === 'P') return 'is-info';
+const statusColor = (status) => {
+  if (status === 'AC') return 'is-success';
+  if (status === 'QW' || status === 'C' || status === 'P') return 'is-info';
+  if (VERDICT_COLOR[status]) return VERDICT_COLOR[status];
   return 'is-light';
 };
 
@@ -37,22 +39,21 @@ export default function SubmissionDetail() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('result');
   const { current_user } = useAuth();
-  const { subs } = useSubmissionStream();
-  const live = subs[id];
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['submission', id],
     queryFn: () => get_request(`/submission/${id}`).then((res) => res.data),
     enabled: !!id,
     staleTime: 1000 * 60,
+    refetchInterval: 5000,
   });
 
-  const status = live?.status ?? data?.status;
-  const isOwner = !!data && data.user?.id === current_user?.id;
+  const sub = data;
+  const status = sub?.status;
+  const isOwner = !!sub && sub.user?.id === current_user?.id;
 
   if (!id) return null;
 
-  const sub = data ? { ...data, ...live } : null;
   const date = sub?.date_created ? formatDateWithLink(sub.date_created) : null;
 
   return (
@@ -112,21 +113,26 @@ export default function SubmissionDetail() {
                         </p>
                         <p className="is-size-7 has-text-grey">
                           {sub.user?.username || 'Anonymous'}
+                          {sub.contest_registration?.contest?.name && (
+                            <span className="tag is-warning is-light is-small ml-2">
+                              [{sub.contest_registration.contest.name}]
+                            </span>
+                          )}
                           {date && <span> &bull; <a href={date.link} target="_blank" rel="noopener noreferrer">{date.text}</a></span>}
                         </p>
                       </div>
                     </div>
                     <div className="level-right">
-                      <span className={`tag is-medium ${statusColor(sub.score, status)}`}>
-                        {sub.score} / {sub.max_score}
+                      <span className={`tag is-medium ${statusColor(status)}`}>
+                        {STATUS_LABEL[status] || VERDICT_LABEL[status] || status || '---'}
                       </span>
                     </div>
                   </div>
 
                   <div className="columns is-multiline is-size-7 mb-3">
-                    <div className="column is-2"><strong>Status:</strong> {STATUS_LABEL[status] || status}</div>
-                    <div className="column is-2"><strong>Time:</strong> {fmtTime(sub.time_used)}</div>
-                    <div className="column is-2"><strong>Memory:</strong> {fmtMem(sub.memory_used)}</div>
+                    <div className="column is-2"><strong>Status:</strong> {STATUS_LABEL[status] || VERDICT_LABEL[status] || status}</div>
+                    <div className="column is-2"><strong>Time:</strong> {fmtTime(sub.time)}</div>
+                    <div className="column is-2"><strong>Memory:</strong> {fmtMem(sub.memory)}</div>
                     <div className="column is-2"><strong>Language:</strong> {sub.language || 'C++'}</div>
                     {sub.judger_name && <div className="column is-2"><strong>Judge:</strong> {sub.judger_name}</div>}
                   </div>
@@ -175,7 +181,7 @@ export default function SubmissionDetail() {
                         )}
                       </div>
                     ))
-                  ) : status === 'C' || status === 'P' ? (
+                  ) : status === 'C' || status === 'P' || status === 'QW' ? (
                     <div className="has-text-centered py-6">
                       <span className="icon is-large"><i className="fas fa-spinner fa-pulse"></i></span>
                       <p className="has-text-grey mt-2">Judging...</p>

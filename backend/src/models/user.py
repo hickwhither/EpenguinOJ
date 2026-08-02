@@ -1,15 +1,14 @@
 from typing import *
 from sqlmodel import *
 from sqlalchemy import JSON, BigInteger
-from src.utils import utcnow
+from src.services.timing import utcnow
 import random
 
-from .links import ContestRegistration
-
 if TYPE_CHECKING:
-    from .problem import UserHack
     from .submission import Submission
-    from .contest import Contest
+    from .hack import Hack
+    
+    from .contest import ContestRegistration
 
 DEFAULT_AVATARS = [
     "dolly.webp",
@@ -40,7 +39,8 @@ class UserView(UserPublic):
 class User(UserView, table=True):
     id: Optional[int] = Field(primary_key=True)
     password: str = Field()
-    email: str = Field(unique=True, index=True)
+
+    # email: str = Field(index=True)
     discord_id: Optional[str] = Field(index=True)
     cf_handle: Optional[str] = Field(index=True)
 
@@ -54,9 +54,9 @@ class User(UserView, table=True):
     date_joined: int = Field(default_factory=utcnow, index=True, sa_type=BigInteger)
 
     # Relationships
-    registrations: list[ContestRegistration] = Relationship(back_populates="user", cascade_delete=True)
     submissions: list["Submission"] = Relationship(back_populates="user", cascade_delete=True)
-    userhacks: list["UserHack"] = Relationship(back_populates="user", cascade_delete=True)
+    registrations: list["ContestRegistration"] = Relationship(back_populates="user", cascade_delete=True)
+    hacks: list["Hack"] = Relationship(back_populates="user", cascade_delete=True)
 
     def __str__(self): return self.username
-    def __repr__(self):return f"User({self.username}-{self.discord_id or self.email})"
+    def __repr__(self):return f"User({self.username}-{self.discord_id})"

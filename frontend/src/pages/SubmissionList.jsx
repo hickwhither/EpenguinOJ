@@ -4,14 +4,21 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { get_request } from '../Request';
 import { formatDateWithLink } from '../dateUtils';
-import { useSubmissionStream } from '../components/submission/submissionStream';
 
-const STATUS_LABEL = { QW: 'Queued', C: 'Compiling', P: 'Processing', D: 'Done' };
+const VERDICT_LABEL = {
+  AC: 'Accepted', PAC: 'Partially Accepted', WA: 'Wrong Answer',
+  TLE: 'Time Limit Exceeded', MLE: 'Memory Limit Exceeded', OLE: 'Output Limit Exceeded',
+  IR: 'Invalid Return', RTE: 'Runtime Error', CE: 'Compile Error', IE: 'Internal Error',
+  SC: 'Short-circuited', AB: 'Aborted',
+};
 
-const getStatusBgClass = (score, status) => {
-  if (status === 'D' && score > 0) return 'has-background-success has-text-white';
-  if (status === 'D' && score === 0) return 'has-background-grey-light has-text-dark';
-  if (status === 'C' || status === 'P') return 'has-background-info has-text-white';
+const STATUS_LABEL = { QW: 'Queued', C: 'Compiling', P: 'Processing', ...VERDICT_LABEL };
+
+const getStatusBgClass = (status) => {
+  if (status === 'AC') return 'has-background-success has-text-white';
+  if (status === 'QW' || status === 'C' || status === 'P') return 'has-background-info has-text-white';
+  if (['WA', 'MLE', 'RTE', 'CE', 'IE'].includes(status)) return 'has-background-danger has-text-white';
+  if (['PAC', 'TLE', 'OLE', 'IR'].includes(status)) return 'has-background-warning has-text-dark';
   return 'has-background-grey-light has-text-dark';
 };
 
@@ -32,23 +39,18 @@ const fetchSubmissions = async ({ is_best, problem_id, contest_id, username, pag
   };
 };
 
-function SubmissionRow({ sub, live, onView }) {
-  const score = live?.score ?? sub.score ?? 0;
-  const max_score = live?.max_score ?? sub.max_score ?? 0;
-  const status = live?.status ?? sub.status;
-  const time_used = live?.time_used ?? sub.time_used;
-  const memory_used = live?.memory_used ?? sub.memory_used;
-
+function SubmissionRow({ sub, onView }) {
+  const status = sub.status;
   return (
     <div className="is-flex is-align-items-center border-bottom py-2 px-3"
       style={{ borderBottom: '1px solid #f0f0f0', minHeight: '70px' }}>
-      <div className={`has-text-centered p-2 mr-3 is-flex is-flex-direction-column is-justify-content-center ${getStatusBgClass(score, status)}`}
+      <div className={`has-text-centered p-2 mr-3 is-flex is-flex-direction-column is-justify-content-center ${getStatusBgClass(status)}`}
         style={{ width: '100px', minWidth: '100px', borderRadius: '6px', height: '56px' }}>
         <span className="is-size-6 has-text-weight-bold" style={{ lineHeight: '1.1' }}>
-          {score !== null ? `${score} / ${max_score}` : '---'}
+          {status || '---'}
         </span>
         <span className="is-size-7 mt-1 opacity-80" style={{ fontSize: '0.75rem' }}>
-          {STATUS_LABEL[status] || status} | {sub.language || 'C++'}
+          {STATUS_LABEL[status] || 'Unknown'} | {sub.language || 'C++'}
         </span>
       </div>
       <div className="is-flex-grow-1" style={{ overflow: 'hidden' }}>
@@ -61,9 +63,9 @@ function SubmissionRow({ sub, live, onView }) {
           <strong className="has-text-info mr-1">
             {sub.user?.username || sub.username || 'Anonymous'}
           </strong>
-          {sub.contest?.name && (
+          {sub.contest_registration?.contest?.name && (
             <span className="tag is-warning is-light is-small mr-2 py-0 px-1">
-              [{sub.contest.name}]
+              [{sub.contest_registration.contest.name}]
             </span>
           )}
           <span>&bull; <a href={formatDateWithLink(sub.date_created).link} target="_blank" rel="noopener noreferrer">{formatDateWithLink(sub.date_created).text}</a></span>
@@ -74,10 +76,10 @@ function SubmissionRow({ sub, live, onView }) {
       </div>
       <div className="has-text-right" style={{ minWidth: '90px' }}>
         <div className="is-size-7 has-text-weight-semibold">
-          {time_used ? `${(time_used / 1000).toFixed(2)}s` : '---'}
+          {sub.time ? `${sub.time.toFixed(2)}s` : '---'}
         </div>
         <div className="is-size-7 has-text-grey">
-          {memory_used ? `${(memory_used / 1024).toFixed(2)} MB` : '---'}
+          {sub.memory ? `${(sub.memory / 1024).toFixed(2)} MB` : '---'}
         </div>
       </div>
     </div>
@@ -95,7 +97,6 @@ export default function SubmissionList({
   const [debouncedUsername, setDebouncedUsername] = useState('');
   const { problem_id: paramProblemId, contest_id: paramContestId } = useParams();
   const { current_user } = useAuth();
-  const { subs } = useSubmissionStream();
 
   const problem_id = propProblemId || paramProblemId;
   const contest_id = propContestId || paramContestId;
@@ -110,6 +111,7 @@ export default function SubmissionList({
     queryKey: ['submissions', { isBest, problem_id, contest_id, username, page }],
     queryFn: () => fetchSubmissions({ is_best: isBest, problem_id, contest_id, username, page }),
     staleTime: 1000 * 10,
+    refetchInterval: 5000,
     placeholderData: (prev) => prev,
   });
 
@@ -193,7 +195,7 @@ export default function SubmissionList({
           ) : (
             <div className="submission-list">
               {list.map((sub) => (
-                <SubmissionRow key={sub.id} sub={sub} live={subs[sub.id]} onView={(id) => navigate(`/submission/${id}`)} />
+                <SubmissionRow key={sub.id} sub={sub} onView={(id) => navigate(`/submission/${id}`)} />
               ))}
             </div>
           )}

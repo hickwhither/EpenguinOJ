@@ -13,7 +13,5 @@ def verify_secret_key(credentials: HTTPAuthorizationCredentials = Depends(securi
 
 router = APIRouter(tags=["webhook"], dependencies=[Depends(verify_secret_key)])
 
-from .judger import router as judger_router
 from .discord import router as discord_router
-router.include_router(judger_router)
 router.include_router(discord_router)

@@ -1,49 +1,17 @@
-from pathlib import Path
 from fastadmin import (
     SqlAlchemyModelAdmin, SqlAlchemyInlineModelAdmin, WidgetType,
     ActionResponseSchema, ActionResponseType,
     register, action,
-) 
+)
 from sqlmodel import select
 
 from src.database import async_session_maker
-from src.models import Submission, Subtask, Problem, Hack
+from src.models import Submission, Problem
 from ..config import redis_client
 from .judging import SubmissionAdmin, rejudge_submissions
 
 
-@register(Subtask, sqlalchemy_sessionmaker=async_session_maker)
-class SubtaskAdmin(SqlAlchemyModelAdmin):
-    menu_section = "Problem"
-    list_display = ("id", "problem_id", "name", "description", "points")
-    list_filter = {"problem_id", }
-    search_fields = ("name", "description", )
-    formfield_overrides = {
-        "description": (WidgetType.TextArea,{}),
-        "generator": (WidgetType.TextArea, {}),
-        "validator": (WidgetType.TextArea, {}),
-        "seeds": (WidgetType.JsonTextArea, {}),
-    }
-
-
-
-@register(Hack, sqlalchemy_sessionmaker=async_session_maker)
-class HackAdmin(SqlAlchemyModelAdmin):
-    menu_section = "Problem"
-    list_display = ("id", "description", "subtask" "language",)
-    list_filter = ("subtask", "language")
-    search_fields = ("description", "subtask")
-    formfield_overrides = {
-        "source": (WidgetType.TextArea, {}),
-    }
-
-
 # INLINES
-class SubtaskInline(SubtaskAdmin, SqlAlchemyInlineModelAdmin):
-    model = Subtask
-    fk_name = "problem_id"
-
-
 class SubmissionInLine(SubmissionAdmin, SqlAlchemyInlineModelAdmin):
     model = Submission
     fk_name = "problem_id"
@@ -59,10 +27,9 @@ class ProblemAdmin(SqlAlchemyModelAdmin):
     search_fields = ("name", "statement")
     formfield_overrides = {
         "statement": (WidgetType.TextArea, {}),
-        "answer": (WidgetType.TextArea, {}),
-        "checker": (WidgetType.TextArea, {}),
+        "package": (WidgetType.JsonTextArea, {}),
     }
-    inlines = (SubtaskInline, SubmissionInLine,)
+    inlines = (SubmissionInLine,)
 
     actions = ("sync_to_redis", "rejudge_all_submission")
 
@@ -84,5 +51,3 @@ class ProblemAdmin(SqlAlchemyModelAdmin):
             type=ActionResponseType.MESSAGE,
             data=f"Queued {count} submission(s) across {len(ids)} problem(s)",
         )
-
-

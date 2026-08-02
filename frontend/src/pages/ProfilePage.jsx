@@ -68,8 +68,8 @@ export default function ProfilePage() {
               <div>
                 {submissions.slice(0, 20).map((sub) => (
                   <div key={sub.id} className="is-flex is-align-items-center py-2" style={{ borderBottom: '1px solid #f0f0f0' }}>
-                    <span className={`tag ${sub.status === 'D' ? (sub.score > 0 ? 'is-success' : 'is-light') : 'is-info'} mr-2`}>
-                      {sub.score ?? '---'}/{sub.max_score ?? '---'}
+                    <span className={`tag ${sub.status === 'AC' ? 'is-success' : ['WA', 'MLE', 'RTE', 'CE', 'IE'].includes(sub.status) ? 'is-danger' : 'is-info'} mr-2`}>
+                      {sub.status || '---'}
                     </span>
                     <Link to={`/p/${sub.problem?.id}`} className="has-text-link mr-2">
                       {sub.problem?.name || `Problem #${sub.problem?.id}`}

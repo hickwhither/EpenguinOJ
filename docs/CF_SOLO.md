@@ -5,7 +5,7 @@ Codeforces giới hạn 1 request mỗi 2 giây.
 ## Xác nhận người dùng
 Người dùng đặt first name theo hash jwt, server đọc và xác nhận
 
-GET https://codeforces.com/api/user.info?handles=hickwhither&checkHistoricHandles=false
+GET https://codeforces.com/api/user.info?handles=hickwhither&checkHistoricHandles=false 
 ```json
 {
   "status": "OK",

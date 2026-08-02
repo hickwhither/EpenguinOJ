@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { post_request } from '../../Request';
 import { toast } from 'react-toastify';
 
-export default function SubmitModal({ isOpen, onClose, problem_id, problemName, contest_code }) {
+export default function SubmitModal({ isOpen, onClose, problem_id, problemName, contest_id }) {
   const [language, setLanguage] = useState('cpp');
   const [source, setSource] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -15,7 +15,7 @@ export default function SubmitModal({ isOpen, onClose, problem_id, problemName, 
     try {
       const params = new URLSearchParams();
       if (problem_id) params.append('problem_id', problem_id);
-      if (contest_code) params.append('contest_id', contest_code);
+      if (contest_id) params.append('contest_id', contest_id);
 
       const res = await post_request(`/submit_code?${params.toString()}`, { language, source });
       
