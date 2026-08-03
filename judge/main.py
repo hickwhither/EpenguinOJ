@@ -30,9 +30,7 @@ async def start_worker():
             if result:
                 _, raw_payload = result
                 payload = json.loads(raw_payload)
-                await process_submission(
-                    payload, box_id=BOX_ID, judger_name=JUDGER_NAME,
-                )
+                await process_submission(redis_client, payload, box_id=BOX_ID, judger_name=JUDGER_NAME)
     except asyncio.CancelledError:
         print("Worker stopping...")
     finally:

@@ -194,8 +194,8 @@ async def get_submission(
         data = json.loads(live)
         if data.get("status") in ("QW", "C", "P"):
             submission.status = data.get("status", submission.status)
-            submission.time = data.get("time_used", submission.time)
-            submission.memory = data.get("memory_used", submission.memory)
+            submission.time = data.get("time", submission.time)
+            submission.memory = data.get("memory", submission.memory)
             submission.results = data.get("results", submission.results)
 
     return submission

@@ -53,10 +53,10 @@ async def apply_result_to_db(session, submission_id: int, data: dict) -> None:
         return
 
     sub.status = data.get("status", sub.status)
-    sub.time = data.get("time_used", sub.time)
-    sub.memory = data.get("memory_used", sub.memory)
+    sub.time = data.get("time", sub.time)
+    sub.memory = data.get("memory", sub.memory)
     sub.results = data.get("results", sub.results)
-    sub.error = data.get("error")
+    sub.error = data.get("error", "")
     sub.judger_name = data.get("judger_name", sub.judger_name)
     sub.judged_date = utcnow()
     session.add(sub)

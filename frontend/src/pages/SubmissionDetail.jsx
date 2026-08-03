@@ -24,8 +24,8 @@ const VERDICT_COLOR = {
   SC: 'is-grey', AB: 'is-grey',
 };
 
-const fmtTime = (s) => (s !== null && s !== undefined ? `${s.toFixed(2)}s` : '---');
-const fmtMem = (kb) => (kb ? `${(kb / 1024).toFixed(2)} MB` : '---');
+const fmtTime = (s) => (s !== null && s !== undefined ? `${s.toFixed(3)}s` : '---');
+const fmtMem = (kb) => (kb ? `${(kb / 1024).toFixed(3)} MB` : '---');
 
 const statusColor = (status) => {
   if (status === 'AC') return 'is-success';
@@ -142,45 +142,26 @@ export default function SubmissionDetail() {
                   )}
 
                   {sub.results?.length > 0 ? (
-                    sub.results.map((group, gi) => (
-                      <div key={gi} className="mb-4">
-                        <div className="is-flex is-align-items-center is-justify-content-space-between mb-2">
-                          <div className="is-flex is-align-items-center">
-                            <span className="has-text-weight-semibold mr-2">Subtask {group.subtask ?? '—'}</span>
-                            <span className={`tag ${VERDICT_COLOR[group.verdict] || 'is-light'} is-small`}>
-                              {VERDICT_LABEL[group.verdict] || group.verdict || '—'}
-                            </span>
-                          </div>
-                          <span className="is-size-7 has-text-grey">
-                            {fmtTime(group.time_used)} &bull; {fmtMem(group.memory_used)}
-                          </span>
-                        </div>
-                        {group.test_cases?.length > 0 ? (
-                          <table className="table is-fullwidth is-narrow is-hoverable is-size-7">
-                            <thead>
-                              <tr><th>#</th><th>Verdict</th><th>Time</th><th>Memory</th><th>Feedback</th></tr>
-                            </thead>
-                            <tbody>
-                              {group.test_cases.map((tc, ti) => (
-                                <tr key={ti}>
-                                  <td>{ti + 1}</td>
-                                  <td>
-                                    <span className={`tag ${VERDICT_COLOR[tc.verdict] || 'is-light'} is-small`}>
-                                      {VERDICT_LABEL[tc.verdict] || tc.verdict}
-                                    </span>
-                                  </td>
-                                  <td>{fmtTime(tc.time_used)}</td>
-                                  <td>{fmtMem(tc.memory_used)}</td>
-                                  <td className="has-text-grey">{tc.feedback || ''}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        ) : (
-                          group.feedback && <p className="help has-text-grey">{group.feedback}</p>
-                        )}
-                      </div>
-                    ))
+                    <table className="table is-fullwidth is-narrow is-hoverable is-size-7">
+                      <thead>
+                        <tr><th>Group</th><th>Status</th><th>Time</th><th>Memory</th><th>Feedback</th></tr>
+                      </thead>
+                      <tbody>
+                        {sub.results.map((g, gi) => (
+                          <tr key={gi}>
+                            <td>{g.group || '—'}</td>
+                            <td>
+                              <span className={`tag ${VERDICT_COLOR[g.status] || 'is-light'} is-small`}>
+                                {VERDICT_LABEL[g.status] || g.status || '—'}
+                              </span>
+                            </td>
+                            <td>{fmtTime(g.time)}</td>
+                            <td>{fmtMem(g.memory)}</td>
+                            <td className="has-text-grey">{g.feedback || ''}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   ) : status === 'C' || status === 'P' || status === 'QW' ? (
                     <div className="has-text-centered py-6">
                       <span className="icon is-large"><i className="fas fa-spinner fa-pulse"></i></span>

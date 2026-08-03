@@ -76,10 +76,10 @@ function SubmissionRow({ sub, onView }) {
       </div>
       <div className="has-text-right" style={{ minWidth: '90px' }}>
         <div className="is-size-7 has-text-weight-semibold">
-          {sub.time ? `${sub.time.toFixed(2)}s` : '---'}
+          {sub.time ? `${sub.time.toFixed(3)}s` : '---'}
         </div>
         <div className="is-size-7 has-text-grey">
-          {sub.memory ? `${(sub.memory / 1024).toFixed(2)} MB` : '---'}
+          {sub.memory ? `${(sub.memory / 1024).toFixed(3)} MB` : '---'}
         </div>
       </div>
     </div>

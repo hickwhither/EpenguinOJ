@@ -117,7 +117,7 @@ class Submission:
         if self.language == "text":
             with open(os.path.join(self.work_dir, "output"), "w", encoding="utf-8") as f:
                 f.write(self.source_code)
-            return {"status": "OK", "time_used": 0.0, "memory_used": 0.0}
+            return {"status": "OK", "time": 0.0, "memory": 0.0}
         
         # Chỉ chạy isolate lúc execute (run) code
         self._init_box()
@@ -172,13 +172,13 @@ class Submission:
             if status == "OK":
                 status = "RTE"
 
-        mem_used = float(meta.get("cg-mem") or meta.get("max-rss") or 0)
-        time_used = float(meta.get("time", 0) or 0)
+        mem = float(meta.get("cg-mem") or meta.get("max-rss") or 0)
+        time = float(meta.get("time", 0) or 0)
 
         return {
             "status": status,
-            "time_used": time_used,
-            "memory_used": mem_used
+            "time": time,
+            "memory": mem
         }
 
     def cleanup(self) -> None:
