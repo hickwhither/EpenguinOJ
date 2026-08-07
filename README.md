@@ -1,10 +1,11 @@
 HWOJ
 
-DEMO: https://test.hw.io.vn/
+Contact me for setting up this useless.
 
-![Home](Home.png)
-![Problems](Problems.png)
+[DEMO images](DEMO.md)
 
-[Installing the site](/docs/INSTALL.md)
-[Updating the site](/docs/UPDATE.md)
-[Setting the judge](/docs/JUDGE.md)
+[Installing the site](docs/INSTALL.md)
+
+[Updating the site](docs/UPDATE.md)
+
+[Setting the judge](docs/JUDGE.md)

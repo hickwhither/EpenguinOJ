@@ -194,7 +194,7 @@ export default function DiscordConfirm() {
         <h1 className="title has-text-centered is-size-4">
           {action === 'create_account' && (
             <>
-              <i className="fas fa-user-plus mr-2"></i> Create Discord Account
+              <i className="fas fa-user-plus mr-2"></i> Create Account
             </>
           )}
           {action === 'change_password' && (

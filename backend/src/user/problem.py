@@ -18,6 +18,7 @@ from src.services.contest import (
 from src.services.user import get_user_or_404
 from src.models import (
     ContestRegistration,
+    Contest,
     Problem,
     ProblemPublic,
     ProblemView,
@@ -53,8 +54,18 @@ async def get_problem_or_404(session: SessionDep, id: str) -> Problem:
 async def get_list_problem(
     session: SessionDep,
     search: str | None = None,
+    contest_id: str | None = None,
+    current_user: User = Depends(verify_auth),
 ):
-    query = select(Problem).where(Problem.is_public == True)
+    # Contest
+    if contest_id:
+        contest = await get_contest_or_404(session, contest_id)
+        await ensure_can_view_contest_content(contest, current_user, session)
+        query = select(Problem).where(Problem.contest_id == contest_id)
+    else:
+        query = select(Problem).where(Problem.is_public == True)
+
+    # Filter by name
     if search:
         search_filter = f"%{search.strip()}%"
         query = query.where(or_(Problem.name.ilike(search_filter), Problem.statement.ilike(search_filter)))
@@ -66,11 +77,13 @@ async def get_list_problem(
 async def get_problem(
     session: SessionDep,
     problem_id: str,
+    contest_id: str | None = None,
     current_user: User = Depends(verify_auth),
 ):
     problem = await get_problem_or_404(session, problem_id)
-    if problem.contest:
-        await ensure_can_view_contest_content(problem.contest, current_user, session)
+    if contest_id:
+        contest = await get_contest_or_404(session, contest_id)
+        await ensure_can_view_contest_content(contest, current_user, session)
         return problem
 
     if not problem.is_public:

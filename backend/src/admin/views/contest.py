@@ -29,8 +29,8 @@ class ContestAdmin(TimestampAdminMixin, SqlAlchemyModelAdmin):
     formfield_overrides = {
         "description": (WidgetType.TextArea,{}),
         "password": (WidgetType.PasswordInput, {"required": False}),
-        "start_time": (WidgetType.DateTimePicker, {}),
-        "end_time": (WidgetType.DateTimePicker, {}),
+        "start_time": (WidgetType.DateTimePicker, {"required": True}),
+        "end_time": (WidgetType.DateTimePicker, {"required": True}),
         "registration_start": (WidgetType.DateTimePicker, {}),
         "registration_end": (WidgetType.DateTimePicker, {}),
     }
